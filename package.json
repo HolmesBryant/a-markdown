@@ -1,0 +1,31 @@
+{
+  "name": "A-Markdown",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "A web component that converts Markdown formatted text to HTML",
+  "main": "a-markdown.js",
+  "license": "GPL-3.0-or-later",
+  "author": "Holmes Bryant <webmaastaa@gmail.com>",
+  "homepage": "https://github.com/HolmesBryant/a-markdown",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HolmesBryant/a-markdown.git"
+  },
+  "keywords": [
+    "module",
+    "component",
+    "markdown"
+  ],
+  "bugs": {
+    "url": "https://github.com/HolmesBryant/a-markdown/issues"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "browser-sync start --server --files \"src/*.*\""
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "browser-sync": "^3.0.3",
+    "rollup": "^2.79.2"
+  }
+}
