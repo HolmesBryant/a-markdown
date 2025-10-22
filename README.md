@@ -13,11 +13,10 @@ A standards-based web component that fetches, parses, and renders Markdown conte
 ## Features
 
 *   **Simple to Use**: Just add the `<a-markdown>` tag to your HTML and point it to a Markdown file.
-*   **Encapsulated**: Renders content within a Shadow DOM, ensuring styles do not leak in or out.
 *   **Cacheable**: Fetched files are cached by default to reduce network requests. Caching can be disabled.
 *   **Customizable**:
     *   Easily change the Showdown.js library URL to use a different version.
-    *   Style the component using CSS Custom Properties.
+    *   Style the rendered content the same way you apply styles to anything else in your page.
 *   **Error Handling**: Displays clear error messages if a file cannot be found or the converter fails to load.
 
 ## Installation
@@ -69,23 +68,4 @@ NOTE: You must use the ESM version of Showdown. The code will not import if it i
 
 ## Styling
 
-You can customize some aspects of the appearance using the following CSS Custom Properties:
-
-| CSS Variable        | Description                                            | Default     |
-| ------------------- | ------------------------------------------------------ | ----------- |
-| `--border-color`    | The color of the component's border and table borders. | `silver`    |
-| `--link-color`      | The color of hyperlink text.                           | `dodgerblue`|
-| `--code-color`      | The text color of `<code>` blocks.      			   | `gray`       |
-
-### Styling Example
-
-```css
-	a-markdown {
-	  --border-color: #333;
-	  --link-color: deeppink;
-	  --code-color: green;
-
-	  font-family: 'Georgia', serif;
-	  margin-bottom: 2rem;
-	}
-```
+The results are rendered as direct children of `<a-markdown>`. That means you can style the rendered content the same way you apply styles to anything else in your page.

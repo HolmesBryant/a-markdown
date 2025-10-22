@@ -7,8 +7,21 @@
 	<script type="module" src="src/a-markdown.js"></script>
 	<script type="module" src="extra/a-code.min.js"></script>
 	<link rel="stylesheet" href="extra/styles.css">
+	<link rel="stylesheet" href="extra/a-markdown.css">
+
+	<style>
+		.pre
+		{ white-space: pre; }
+
+		@media (min-width: 640px) {
+			.flex360 {
+				flex-basis: 47%;
+			}
+		}
+	</style>
 </head>
 <body>
+	<p><a href="test.html">testing...</a></p>
 	<header>
 		<h1>a-markdown Web Component</h1>
 		<p> A component that renders Markdown formatted text as HTML </p>
@@ -18,120 +31,55 @@
 		</details>
 	</header>
 
-	<section id="demo" class="flex column">
+	<section>
+		<h2>Quick Start</h2>
+		<a-code highlight>
+			<textarea>
+				<html>
+					<head>
+						...
+						<script type="module" src="path/to/a-markdown.min.js"></script>
+					</head>
+
+					<body>
+						<a-markdown file="path/to/markdown-file.md">
+						</a-markdown>
+					</body>
+				</html>
+			</textarea>
+		</a-code>
+
+	<section id="demo">
 		<h2>Demo</h2>
-		<div class="flex stretch flex30">
-			<div class="card flex column">
+
+		<div class="card">
+			<h3>Rendered Result</h3>
+
+			<a-markdown file="sample.md" options='{"foo":"bar"}'></a-markdown>
+		</div>
+
+		<p> </p>
+
+		<div class="flex stretch space-around">
+			<div class="card flex360">
 				<strong>Markdown</strong>
-				<a-code>
-					# Heading 1
 
-					## Heading 2
-
-					### Heading 3
-
-					#### Heading 4
-
-					Normal Test
-
-					**Bold Text**
-
-					*Italic Text*
-
-					[Some Linked Text](http://foo.com)
-
-					`inline code`
-
-							<!-- indented code block -->
-							<div>
-								This text is inside a div
-							</div>
-
-					```
-					<!-- unindented code block -->
-						<div>
-							This text is inside a div
-						</div>
-					```
-
-					## A Table
-
-					| Heading One | Heading Two | Heading Three |
-					| :---------- | :---------: | ------------: |
-					| Cell A 1    | Cell A 2    | Cell A 3      |
-					| Cell B 1    | Cell B 2    | Cell B 3      |
-
-				</a-code>
+				<a-markdown
+					nocache
+					class="pre"
+					file="sample.md"
+					display="markdown">
+				</a-markdown>
 			</div>
 
-			<div class="card flex column">
-				<strong>HTML</strong>
-				<a-code>
-					<textarea>
-						<h1 id="heading1">Heading 1</h1>
-						<h2 id="heading2">Heading 2</h2>
-						<h3 id="heading3">Heading 3</h3>
-						<h4 id="heading4">Heading 4</h4>
-						<p>Normal Test</p>
-						<p>
-								<strong>Bold Text</strong>
-						</p>
-						<p>
-							<em>Italic Text</em>
-						</p>
-						<p>
-							<a href="http://foo.com">
-								Some Linked Text
-							</a>
-						</p>
-						<p>
-							<code>inline code</code>
-						</p>
-						<pre>
-							<code>
-								&lt;!-- indented code block --&gt;
-						    &lt;div&gt;
-						    	This text is inside a div
-						    &lt;/div&gt;
-							</code>
-						</pre>
-						<pre>
-							<code>
-								&lt;!-- unindented code block --&gt;
-						    &lt;div&gt;
-						        This text is inside a div
-						    &lt;/div&gt;
-							</code>
-						</pre>
-						<h2 id="atable">A Table</h2>
-						<table>
-						<thead>
-						<tr>
-						<th style="text-align:left;">Heading One</th>
-						<th style="text-align:center;">Heading Two</th>
-						<th style="text-align:right;">Heading Three</th>
-						</tr>
-						</thead>
-						<tbody>
-						<tr>
-						<td style="text-align:left;">Cell A 1</td>
-						<td style="text-align:center;">Cell A 2</td>
-						<td style="text-align:right;">Cell A 3</td>
-						</tr>
-						<tr>
-						<td style="text-align:left;">Cell B 1</td>
-						<td style="text-align:center;">Cell B 2</td>
-						<td style="text-align:right;">Cell B 3</td>
-						</tr>
-						</tbody>
-						</table>
-					</textarea>
-				</a-code>
-			</div>
-
-			<div class="card">
-				<strong>Rendered Result</strong>
-				<a-markdown file="sample.md"></a-markdown>
+			<div class="card flex360">
+				<strong>Generated HTML</strong>
+				<a-markdown
+					nocache
+					class="pre"
+					file="sample.md"
+					display="html">
+				</a-markdown>
 			</div>
 		</div>
 

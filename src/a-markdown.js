@@ -35,11 +35,16 @@ export default class AMarkdown extends HTMLElement {
    */
   #converter;
 
+  #options = {
+    tables: true,
+    strikethrough: true,
+    simpleLineBreaks: true
+  };
+
   /**
-   * The container element within the Shadow DOM where the HTML is rendered.
-   * @type {HTMLElement}
+   * 'converted', 'markdown', 'html'
    */
-  container;
+  #display = 'converted';
 
   /**
    * The URL to import the Showdown ES module from.
@@ -62,7 +67,7 @@ export default class AMarkdown extends HTMLElement {
    * @static
    * @returns {string[]}
    */
-  static observedAttributes = ['file', 'nocache', 'showdown-url'];
+  static observedAttributes = ['file', 'nocache', 'showdown-url', 'display', 'options'];
 
   /**
    * The HTML and CSS template for the component's Shadow DOM.
@@ -72,53 +77,10 @@ export default class AMarkdown extends HTMLElement {
   static template = `
     <style>
       :host {
-        --border-color: silver;
-        --link-color: dodgerblue;
-        --code-color: gray;
-
         display: block;
-        overflow: auto;
-        padding: 1rem;
-        border: 1px solid var(--border-color);
-        border-radius: 5px;
       }
-
-      a {
-        color: var(--link-color);
-        font-weight: bold;
-        text-decoration: underline;
-      }
-
-      a:hover {
-        text-decoration: none;
-      }
-
-      code {
-        border-radius: 3px;
-        color: var(--code-color);
-        font-family: "Courier New", ui-monospace;
-        padding: 0.2rem 0.4rem;
-      }
-
-      pre {
-        padding: 1rem;
-        border-radius: 5px;
-        overflow-x: auto;
-      }
-
-      table {
-        border-collapse: collapse;
-        width: 100%;
-      }
-
-      th, td {
-        border: 1px solid var(--border-color);
-        padding: 8px;
-      }
-
-      .error { color: darkred; }
     </style>
-    <div id="container"></div>
+    <slot></slot>
   `;
 
   /**
@@ -128,7 +90,6 @@ export default class AMarkdown extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this.shadowRoot.innerHTML = AMarkdown.template;
-    this.container = this.shadowRoot.querySelector('#container');
   }
 
   /**
@@ -140,11 +101,20 @@ export default class AMarkdown extends HTMLElement {
   attributeChangedCallback(attr, oldval, newval) {
     if (!this.nocache && oldval === newval) return;
     switch (attr) {
+      case 'display':
+        this.#display = newval;
+        this.render();
+        break;
+      case 'options':
+        this.#options = { ...this.#options, ...JSON.parse(newval)};
+        this.render();
+        break;
       case 'showdown-url':
         this.#showdownUrl = newval;
         this.#converter = null; // Reset converter to force re-import
         AMarkdown.fileCache.clear(); // Clear cache as the converter changed
-        // intentional fall-through
+        this.render();
+        break;
       default:
         // Re-render the content
         this.render();
@@ -159,11 +129,18 @@ export default class AMarkdown extends HTMLElement {
   }
 
   /**
-   * Displays an error message inside the component's container.
+   * Displays an error message inside the component's content.
    * @param {string} message - The error message to display.
    */
   displayError(message) {
-    this.container.innerHTML = `<p class="error"><strong>Error:</strong> ${message}</p>`;
+    this.innerHTML = `<p class="error"><strong>Error:</strong> ${message}</p>`;
+  }
+
+  getConverted(converter, markdown) {
+    const html = converter.makeHtml(markdown);
+    // Cache the result
+    AMarkdown.fileCache.set(this.file, html);
+    return html;
   }
 
   /**
@@ -181,11 +158,7 @@ export default class AMarkdown extends HTMLElement {
     try {
       const mods = await import(this.#showdownUrl);
       const showdown = mods.default;
-      this.#converter = new showdown.Converter({
-        tables: true,
-        strikethrough: true,
-        simpleLineBreaks: true
-      });
+      this.#converter = new showdown.Converter(this.options);
       return this.#converter;
     } catch (error) {
       throw new Error('Could not load the markdown converter library.');
@@ -229,26 +202,37 @@ export default class AMarkdown extends HTMLElement {
 
     // Use cached content if available and caching is not disabled
     if (!this.nocache && AMarkdown.fileCache.has(this.file)) {
-      this.container.innerHTML = AMarkdown.fileCache.get(this.file);
+      this.innerHTML = AMarkdown.fileCache.get(this.file);
       return;
     }
 
     try {
       // Fetch the converter and file content concurrently
-      const [converter, text] = await Promise.all([
+      const [converter, markdown] = await Promise.all([
         this.getConverter(),
         this.getFile(this.file)
       ]);
 
-      const html = converter.makeHtml(text);
-      this.container.innerHTML = html;
-      // Cache the result
-      AMarkdown.fileCache.set(this.file, html);
+      if (this.#display === 'markdown') {
+        this.textContent = markdown;
+      } else if (this.#display === 'html') {
+        const ta = document.createElement('textarea');
+        ta.value = this.getConverted(converter, markdown);
+        this.textContent = ta.value;
+      } else {
+        this.innerHTML = this.getConverted(converter, markdown);
+      }
+
     } catch (error) {
       console.error(error);
       this.displayError(error.message);
     }
   }
+
+
+
+  get display() { return this.getAttribute('display') }
+  set display(value) { this.setAttribute('display', value) }
 
   /**
    * Gets the value of the `file` attribute.
@@ -275,6 +259,9 @@ export default class AMarkdown extends HTMLElement {
   set nocache(value) {
     this.toggleAttribute('nocache', !!value);
   }
+
+  get options() { return this.getAttribute('options') }
+  set options(value) { this.setAttribute('options', JSON.stringify(value)) }
 
   /**
    * Gets the value of the `showdown-url` attribute.

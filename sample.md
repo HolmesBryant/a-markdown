@@ -18,13 +18,15 @@ Normal Test
 
 		<!-- indented code block -->
 		<div>
-			This text is inside a div
+			code block (indented 4 spaces)
 		</div>
+
+---
 
 ```
 <!-- unindented code block -->
 	<div>
-		This text is inside a div
+		code block (using ```)
 	</div>
 ```
 
