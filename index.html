@@ -4,14 +4,22 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>a-markdown Web Component</title>
+	<script type="module" src="extra/a-bind.min.js"></script>
+	<script type="module" src="extra/check-box.js"></script>
 	<script type="module" src="src/a-markdown.js"></script>
 	<script type="module" src="extra/a-code.min.js"></script>
+	<script type="module" src="extra/a-tooltip.min.js"></script>
+
 	<link rel="stylesheet" href="extra/styles.css">
 	<link rel="stylesheet" href="extra/a-markdown.css">
 
 	<style>
 		.pre
 		{ white-space: pre; }
+
+		#demo-elem {
+			/* border: 1px solid orange; */
+		}
 
 		@media (min-width: 640px) {
 			.flex360 {
@@ -31,8 +39,299 @@
 		</details>
 	</header>
 
+
+	<section id="demo">
+	<h2>Demo</h2>
+
+		<div class="flex top">
+			<div id="options" class="flex360">
+
+				<fieldset>
+					<legend>a-markdown options</legend>
+
+					<div class="flex column">
+						<label
+							for="demo-display"
+							title="Display the rendered results, the original markdown, or the raw HTML">
+							display
+						</label>
+
+						<a-bind
+							model="a-markdown#demo-elem"
+							property="display">
+							<select id="demo-display">
+								<option>converted</option>
+								<option>markdown</option>
+								<option>html</option>
+							</select>
+						</a-bind>
+					</div>
+				</fieldset>
+
+				<fieldset>
+				<legend>Showdown Options</legend>
+
+					<div class="flex column gap0">
+						<label for="showdown-flavor">
+							Showdown Flavor
+						</label title="You can use flavors or presets so that showdown behaves like popular markdown flavors.">
+
+						<a-bind
+							model="a-markdown#demo-elem"
+							property="options.flavor"
+							func="setFlavor">
+
+								<select id="showdown-flavor">
+									<option value="">Select...</option>
+									<option value="original">
+										original (Original Markdown Spec)
+									</option>
+									<option value="vanilla">
+										vanilla (Showdown default options)
+									</option>
+									<option value="github">
+										github (GFM GitHub Flavored Markdown)
+									</option>
+								</select>
+							</a-bind>
+					</div>
+
+					<hr>
+
+					<check-box
+						input-id="tables"
+						label="tables"
+						value="true"
+						bind="a-markdown#demo-elem:options.tables"
+						tooltip="(boolean) [default false] Enable support for tables syntax.">
+					</check-box>
+
+					<check-box
+						input-id="omitExtraWLInCodeBlocks"
+						label="omitExtraWLInCodeBlocks"
+						value="true"
+						bind="a-markdown#demo-elem:options.omitExtraWLInCodeBlocks"
+						tooltip="(boolean) [default false] Omit the trailing newline in a code block.">
+					</check-box>
+
+					<check-box
+						input-id="noHeaderId"
+						label="noHeaderId"
+						value="true"
+						bind="a-markdown#demo-elem:options.noHeaderId"
+						tooltip="(boolean) [default false] Disable the automatic generation of header ids. Setting to true overrides prefixHeaderId">
+					</check-box>
+
+					<check-box
+						input-id="customizedHeaderId"
+						label="customizedHeaderId"
+						value="true"
+						bind="a-markdown#demo-elem:options.customizedHeaderId"
+						tooltip="(boolean) [default false] Use text in curly braces as header id.">
+					</check-box>
+
+					<check-box
+						input-id="ghCompatibleHeaderId"
+						label="ghCompatibleHeaderId"
+						value="true"
+						bind="a-markdown#demo-elem:options.ghCompatibleHeaderId"
+						tooltip="(boolean) [default false] Generate header ids compatible with github style (spaces are replaced with dashes and a bunch of non alphanumeric chars are removed)">
+					</check-box>
+
+					<check-box
+						input-id="prefixHeaderId"
+						label="prefixHeaderId"
+						value="true"
+						bind="a-markdown#demo-elem:options.prefixHeaderId"
+						tooltip="(string/boolean) [default false] Add a prefix to the generated header ids. Passing a string will prefix that string to the header id. Setting to true will add a generic 'section' prefix.">
+					</check-box>
+
+					<check-box
+						input-id="parseImgDimensions"
+						label="parseImgDimensions"
+						value="true"
+						bind="a-markdown#demo-elem:options.parseImgDimensions"
+						tooltip="(boolean) [default false] Enable support for setting image dimensions from within markdown syntax">
+					</check-box>
+
+					<check-box
+						input-id="strikethrough"
+						label="strikethrough"
+						value="true"
+						bind="a-markdown#demo-elem:options.strikethrough"
+						tooltip="(boolean) [default false] Enable support for strikethrough syntax. ~~strikethrough~~ as <del>strikethrough</del>">
+					</check-box>
+
+					<check-box
+						input-id="tablesHeaderId"
+						label="tablesHeaderId"
+						value="true"
+						bind="a-markdown#demo-elem:options.tablesHeaderId"
+						tooltip="(boolean) [default false] If enabled adds an id property to table headers tags.">
+					</check-box>
+
+					<check-box
+						input-id="ghCodeBlocks"
+						label="ghCodeBlocks"
+						value="true"
+						bind="a-markdown#demo-elem:options.ghCodeBlocks"
+						tooltip="(boolean) [default true] Enable support for GFM code block style.">
+					</check-box>
+
+					<check-box
+						input-id="tasklists"
+						label="tasklists"
+						value="true"
+						bind="a-markdown#demo-elem:options.tasklists"
+						tooltip="(boolean) [default false] Enable support for GFM tasklists.">
+					</check-box>
+
+					<check-box
+						input-id="smartIndentationFix"
+						label="smartIndentationFix"
+						value="true"
+						bind="a-markdown#demo-elem:options.smartIndentationFix"
+						tooltip="(boolean) [default false] Tries to smartly fix indentation problems related to es6 template strings in the midst of indented code.">
+					</check-box>
+
+					<check-box
+						input-id="simpleLineBreaks"
+						label="simpleLineBreaks"
+						value="true"
+						bind="a-markdown#demo-elem:options.simpleLineBreaks"
+						tooltip="(boolean) [default false] Parses line breaks as <br>, like GitHub does, without needing 2 spaces at the end of the line.">
+					</check-box>
+
+					<check-box
+						input-id="ghMentions"
+						label="ghMentions"
+						value="true"
+						bind="a-markdown#demo-elem:options.ghMentions"
+						tooltip="(boolean) [default false] Enables github @mentions, which link to the username mentioned">
+					</check-box>
+
+					<check-box
+						input-id="encodeEmails"
+						label="encodeEmails"
+						value="true"
+						bind="a-markdown#demo-elem:options.encodeEmails"
+						tooltip="(boolean) [default true] Enable e-mail addresses encoding through the use of Character Entities, transforming ASCII e-mail addresses into its equivalent decimal entities.">
+					</check-box>
+
+					<check-box
+						input-id="openLinksInNewWindow"
+						label="openLinksInNewWindow"
+						value="true"
+						bind="a-markdown#demo-elem:options.openLinksInNewWindow"
+						tooltip='(boolean) [default false] Open all links in new windows (by adding the attribute target="_blank"'>
+					</check-box>
+
+					<check-box
+						input-id="backslashEscapesHTMLTags"
+						label="backslashEscapesHTMLTags"
+						value="true"
+						bind="a-markdown#demo-elem:options.backslashEscapesHTMLTags"
+						tooltip='(boolean) [default false] Support for HTML Tag escaping. ex: \<div>foo\</div>'>
+					</check-box>
+
+					<check-box
+						input-id="backslashEscapesHTMLTags"
+						label="backslashEscapesHTMLTags"
+						value="true"
+						bind="a-markdown#demo-elem:options.backslashEscapesHTMLTags"
+						tooltip='(boolean) [default false] Support for HTML Tag escaping. ex: \<div>foo\</div>'>
+					</check-box>
+
+					<check-box
+						input-id="emoji"
+						label="emoji"
+						bind="a-markdown#demo-elem:options.emoji"
+						value="true"
+						tooltip='(boolean) [default false] Enable emoji support. Ex: this is a :smile: emoji For more info on available emojis, see https://github.com/showdownjs/showdown/wiki/Emojis'>
+					</check-box>
+
+					<check-box
+						input-id="ellipsis"
+						label="ellipsis"
+						value="true"
+						bind="a-markdown#demo-elem:options.ellipsis"
+						tooltip='(boolean) [default true] Replaces three dots with the ellipsis unicode character.'>
+					</check-box>
+
+					<check-box
+						input-id="completeHTMLDocument"
+						label="completeHTMLDocument"
+						value="true"
+						bind="a-markdown#demo-elem:options.completeHTMLDocument"
+						tooltip='(boolean) [default false] Outputs a complete html document, including <html>, <head> and <body> tags instead of an HTML fragment.'>
+					</check-box>
+
+					<check-box
+						input-id="metadata"
+						label="metadata"
+						value="true"
+						bind="a-markdown#demo-elem:options.metadata"
+						tooltip='(boolean) [default false] Enable support for document metadata (defined at the top of the document between ««« and »»» or between --- and ---).'>
+					</check-box>
+
+					<check-box
+						input-id="splitAdjacentBlockquotes"
+						label="splitAdjacentBlockquotes"
+						value="true"
+						bind="a-markdown#demo-elem:options.splitAdjacentBlockquotes"
+						tooltip='(boolean) [default false] Split adjacent blockquote blocks.'>
+					</check-box>
+
+				</fieldset>
+			</div><!-- /options -->
+
+			<a-markdown
+				nocache
+				id="demo-elem"
+				class="card flex360"
+				file="extra/example-one.md">
+			</a-markdown>
+		</div>
+			smoothLivePreview: (boolean) [default false] Prevents weird effects in live previews due to incomplete input
+		<div>
+		</div>
+	</section>
+
+
+	<section id="demo-old">
+		<div class="card">
+			<h3>Rendered Result</h3>
+
+			<a-markdown file="sample.md" options='{"foo":"bar"}'></a-markdown>
+		</div>
+
+		<p> </p>
+
+		<div class="flex stretch space-around">
+			<div class="card flex360">
+				<strong>Markdown</strong>
+
+				<a-markdown
+					class="pre"
+					file="sample.md"
+					display="markdown">
+				</a-markdown>
+			</div>
+
+			<div class="card flex360">
+				<strong>Generated HTML</strong>
+				<a-markdown
+					class="pre"
+					file="sample.md"
+					display="html">
+				</a-markdown>
+			</div>
+		</div>
+
+	</section>
+
 	<section>
-		<h2>Quick Start</h2>
+	<h2>Quick Start</h2>
 		<a-code highlight>
 			<textarea>
 				<html>
@@ -48,41 +347,5 @@
 				</html>
 			</textarea>
 		</a-code>
-
-	<section id="demo">
-		<h2>Demo</h2>
-
-		<div class="card">
-			<h3>Rendered Result</h3>
-
-			<a-markdown file="sample.md" options='{"foo":"bar"}'></a-markdown>
-		</div>
-
-		<p> </p>
-
-		<div class="flex stretch space-around">
-			<div class="card flex360">
-				<strong>Markdown</strong>
-
-				<a-markdown
-					nocache
-					class="pre"
-					file="sample.md"
-					display="markdown">
-				</a-markdown>
-			</div>
-
-			<div class="card flex360">
-				<strong>Generated HTML</strong>
-				<a-markdown
-					nocache
-					class="pre"
-					file="sample.md"
-					display="html">
-				</a-markdown>
-			</div>
-		</div>
-
-	</section>
 </body>
 </html>

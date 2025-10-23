@@ -34,6 +34,7 @@ export default class AMarkdown extends HTMLElement {
    * @type {object | null}
    */
   #converter;
+  #showdown;
 
   #options = {
     tables: true,
@@ -52,6 +53,7 @@ export default class AMarkdown extends HTMLElement {
    * @type {string}
    */
   #showdownUrl = 'https://cdn.jsdelivr.net/npm/showdown@2.1.0/+esm';
+  #markdown;
 
   /**
    * A static cache to store the HTML content of fetched files.
@@ -70,26 +72,10 @@ export default class AMarkdown extends HTMLElement {
   static observedAttributes = ['file', 'nocache', 'showdown-url', 'display', 'options'];
 
   /**
-   * The HTML and CSS template for the component's Shadow DOM.
-   * @static
-   * @type {string}
-   */
-  static template = `
-    <style>
-      :host {
-        display: block;
-      }
-    </style>
-    <slot></slot>
-  `;
-
-  /**
    * Initializes the component by creating a Shadow DOM and attaching the template.
    */
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
-    this.shadowRoot.innerHTML = AMarkdown.template;
   }
 
   /**
@@ -103,22 +89,19 @@ export default class AMarkdown extends HTMLElement {
     switch (attr) {
       case 'display':
         this.#display = newval;
-        this.render();
         break;
       case 'options':
         this.#options = { ...this.#options, ...JSON.parse(newval)};
-        this.render();
         break;
       case 'showdown-url':
         this.#showdownUrl = newval;
         this.#converter = null; // Reset converter to force re-import
         AMarkdown.fileCache.clear(); // Clear cache as the converter changed
-        this.render();
         break;
-      default:
-        // Re-render the content
-        this.render();
     }
+
+    // Re-render the content
+    this.render();
   }
 
   /**
@@ -136,11 +119,9 @@ export default class AMarkdown extends HTMLElement {
     this.innerHTML = `<p class="error"><strong>Error:</strong> ${message}</p>`;
   }
 
-  getConverted(converter, markdown) {
-    const html = converter.makeHtml(markdown);
-    // Cache the result
-    AMarkdown.fileCache.set(this.file, html);
-    return html;
+  getMetadata() {
+    if (!this.#converter) return;
+    return this.#converter.getMetadata();
   }
 
   /**
@@ -150,15 +131,11 @@ export default class AMarkdown extends HTMLElement {
    * @throws {Error} If the Showdown library fails to load.
    */
   async getConverter() {
-    // If the converter has already been loaded, return it immediately.
-    if (this.#converter) {
-      return this.#converter;
-    }
+    if (!this.nocache && this.#converter) return this.#converter;
 
     try {
-      const mods = await import(this.#showdownUrl);
-      const showdown = mods.default;
-      this.#converter = new showdown.Converter(this.options);
+      const showdown = await this.getShowdown();
+      this.#converter = new showdown.Converter(this.#options);
       return this.#converter;
     } catch (error) {
       throw new Error('Could not load the markdown converter library.');
@@ -188,6 +165,17 @@ export default class AMarkdown extends HTMLElement {
     return response.text();
   }
 
+  async getShowdown() {
+    if (!this.nocache && this.#showdown) return this.#showdown;
+    try {
+      const mods = await import(this.#showdownUrl);
+      this.#showdown = mods.default;
+      return this.#showdown;
+    } catch (error) {
+      throw new Error('Could not import Showdown');
+    }
+  }
+
   /**
    * The main rendering function. It coordinates the fetching of the markdown file
    * and the converter, performs the conversion, and renders the result.
@@ -195,6 +183,8 @@ export default class AMarkdown extends HTMLElement {
    * @returns {Promise<void>}
    */
   async render() {
+    let html;
+
     if (!this.file) {
       this.displayError('No file was provided.');
       return;
@@ -202,37 +192,69 @@ export default class AMarkdown extends HTMLElement {
 
     // Use cached content if available and caching is not disabled
     if (!this.nocache && AMarkdown.fileCache.has(this.file)) {
-      this.innerHTML = AMarkdown.fileCache.get(this.file);
-      return;
+      html = AMarkdown.fileCache.get(this.file);
+    } else {
+      try {
+        // Fetch the converter and file content concurrently
+        const [converter, markdown] = await Promise.all([
+          this.getConverter(),
+          this.getFile(this.file)
+        ]);
+
+        this.#markdown = markdown;
+        html = this.transformData(converter, markdown);
+      } catch (error) {
+        console.error(error);
+        this.displayError(error.message);
+      }
     }
 
-    try {
-      // Fetch the converter and file content concurrently
-      const [converter, markdown] = await Promise.all([
-        this.getConverter(),
-        this.getFile(this.file)
-      ]);
-
-      if (this.#display === 'markdown') {
-        this.textContent = markdown;
-      } else if (this.#display === 'html') {
-        const ta = document.createElement('textarea');
-        ta.value = this.getConverted(converter, markdown);
-        this.textContent = ta.value;
-      } else {
-        this.innerHTML = this.getConverted(converter, markdown);
-      }
-
-    } catch (error) {
-      console.error(error);
-      this.displayError(error.message);
+    if (this.#display === 'markdown') {
+      this.textContent = this.#markdown;
+    } else if (this.#display === 'html') {
+      this.textContent = html;
+    } else {
+      this.innerHTML = html;
     }
   }
 
+  sanitize(value) {
+    const ta = this.ta || document.createElement('textarea');
+    ta.value = value;
+    return ta.value;
+  }
 
+  setFlavor(value) {
+    if (!this.#converter) return;
+    this.#options.flavor = value;
+    this.#converter.setFlavor(value);
+  }
 
-  get display() { return this.getAttribute('display') }
-  set display(value) { this.setAttribute('display', value) }
+  setOption(event) {
+    const {name, value} = event.target;
+    const [prop, sub] = name.split('.');
+    this.#options[sub] = event.target.checked;
+    this.render();
+  }
+
+  transformData(converter, markdown) {
+    let html;
+    markdown = this.sanitize(markdown);
+    try {
+      html = converter.makeHtml(markdown);
+    } catch (error) {
+      this.displayError(`Error transforming markdown. ${error.message}`);
+      throw error;
+    }
+
+    AMarkdown.fileCache.set(this.file, html);
+    return html;
+  }
+
+  get display() { return this.#display }
+  set display(value) {
+    this.setAttribute('display', value)
+  }
 
   /**
    * Gets the value of the `file` attribute.
@@ -260,8 +282,10 @@ export default class AMarkdown extends HTMLElement {
     this.toggleAttribute('nocache', !!value);
   }
 
-  get options() { return this.getAttribute('options') }
-  set options(value) { this.setAttribute('options', JSON.stringify(value)) }
+  get options() { return this.#options }
+  set options(value) {
+    this.setAttribute('options', JSON.stringify(value))
+  }
 
   /**
    * Gets the value of the `showdown-url` attribute.
