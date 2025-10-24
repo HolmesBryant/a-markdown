@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "rollup -c",
-    "dev": "browser-sync start --server --files \"src/*.*\""
+    "dev": "browser-sync start --server --files \"src/*.*, index.html\""
   },
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",

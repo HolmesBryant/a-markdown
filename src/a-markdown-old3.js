@@ -3,7 +3,7 @@
  * @extends HTMLElement
  * @author Holmes Bryant <https://github.com/HolmesBryant>
  * @license MIT
- * @version 2.1.0
+ * @version 2.0.2
  * @summary A custom HTML element that fetches, converts and displays a Markdown file or inline Markdown content as HTML.
  *
  * @description
@@ -72,14 +72,13 @@ export default class AMarkdown extends HTMLElement {
   #converter;
   #initialized = false;
   #markdown;
-  #renderDebounceId = null;
   #showdown;
 
   static #ta = document.createElement('textarea');
 
   /**
    * A static cache to store the HTML content of fetched files or inline content.
-   * The key is a composite of the Showdown URL and the file URL.
+   * The key is the file URL and the value is the converted HTML.
    * @static
    * @type {Map<string, string>}
    */
@@ -121,9 +120,8 @@ export default class AMarkdown extends HTMLElement {
     }
 
     if (oldval === newval) return;
-
     switch (attr) {
-      case 'debug':
+    case 'debug':
         this.#debug = newval !== 'false';
         if (this.debug) console.log(attr, this[attr]);
         break;
@@ -132,29 +130,21 @@ export default class AMarkdown extends HTMLElement {
         if (this.debug) console.log(attr, this[attr]);
         break;
       case 'options':
-        try {
-          const opts = JSON.parse(newval);
-          for (const opt in opts) {
-            opts[opt] = opts[opt] !== 'false' && opts[opt] !== false;
-          }
-          this.#options = { ...this.#options, ...opts };
-          this.#converter = null;
-          if (this.debug) console.log(attr, this.#options);
-        } catch (error) {
-          console.error('Failed to parse "options" attribute. Please provide a valid JSON string.', error);
-        }
+        const opts = JSON.parse(newval);
+        for (const opt in opts) opts[opt] = opts[opt] !== 'false';
+        this.#options = { ...this.#options, ...opts};
+        if (this.debug) console.log(attr, this[attr]);
         break;
       case 'showdown-url':
         this.#showdownUrl = newval;
         this.#converter = null; // Reset converter to force re-import
+        AMarkdown.fileCache.clear(); // Clear cache as the converter changed
         if (this.debug) console.log(attr, this.showdownUrl);
         break;
     }
 
-    if (this.debug) {
-      console.groupEnd();
-    }
-    this.debounceRender();
+    if (this.debug) { console.groupEnd() }
+    if (this.initialized) this.render();
   }
 
   /**
@@ -166,7 +156,7 @@ export default class AMarkdown extends HTMLElement {
     if (!this.hasAttribute('file') && this.textContent.trim().length > 0) {
       this.renderInlineMarkdown();
     } else {
-      this.debounceRender();
+      this.render();
     }
   }
 
@@ -181,53 +171,6 @@ export default class AMarkdown extends HTMLElement {
     this.#blobUrl = null;
     this.#converter = null;
     this.#showdown = null;
-    if (this.#renderDebounceId) {
-      clearTimeout(this.#renderDebounceId);
-    }
-  }
-
-  /**
-   * Debounces the render method to prevent rapid, successive calls.
-   * @param {number} [delay=50] - The debounce delay in milliseconds.
-   */
-  debounceRender(delay = 50) {
-    if (this.debug) {
-      console.groupCollapsed('debounceRender()');
-      console.log('delay', delay);
-      console.groupEnd();
-    }
-
-    if (this.#renderDebounceId) {
-      clearTimeout(this.#renderDebounceId);
-    }
-    this.#renderDebounceId = setTimeout(() => {
-      this.render();
-      this.#renderDebounceId = null;
-    }, delay);
-  }
-
-  dedent(str) {
-    const lines = str.split('\n');
-
-    // Find the minimum indentation of non-empty lines
-    let minIndent = null;
-    for (const line of lines) {
-      // Only consider lines with content
-      if (line.trim().length > 0) {
-        const indentMatch = line.match(/^(\s*)/);
-        const currentIndent = indentMatch[0].length;
-        if (minIndent === null || currentIndent < minIndent) {
-          minIndent = currentIndent;
-        }
-      }
-    }
-
-    // If there's a common indentation, remove it from all lines
-    if (minIndent && minIndent > 0) {
-      str = lines.map(line => line.substring(minIndent)).join('\n');
-    }
-
-    return str;
   }
 
   /**
@@ -320,11 +263,9 @@ export default class AMarkdown extends HTMLElement {
       return;
     }
 
-    const cacheKey = `${this.#showdownUrl}:${this.file}`;
-
     // Use cached content if available and caching is not disabled
-    if (!this.nocache && AMarkdown.fileCache.has(cacheKey)) {
-      html = AMarkdown.fileCache.get(cacheKey);
+    if (!this.nocache && AMarkdown.fileCache.has(this.file)) {
+      html = AMarkdown.fileCache.get(this.file);
     } else {
       try {
         // Fetch the converter and file content concurrently
@@ -334,7 +275,7 @@ export default class AMarkdown extends HTMLElement {
         ]);
 
         this.#markdown = markdown;
-        html = this.transformData(converter, markdown, cacheKey);
+        html = this.transformData(converter, markdown);
 
         if (this.debug) {
           console.log('showdown', this.#showdown);
@@ -348,26 +289,20 @@ export default class AMarkdown extends HTMLElement {
             console.groupEnd();
           console.groupEnd();
         }
+
       } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error(error);
-          this.displayError(error.message);
-        }
+        console.error(error);
         if (this.debug) console.groupEnd();
-        return; // Stop execution on error
+        this.displayError(error.message);
       }
     }
 
-    if (this.isConnected) { // Ensure the element is still in the DOM
-      if (this.#display === 'markdown') {
-        this.textContent = this.#markdown;
-      } else if (this.#display === 'html') {
-        this.textContent = html;
-      } else {
-        // SECURITY NOTE: The XSS vulnerability still exists here.
-        // This should be replaced with a safe HTML rendering mechanism.
-        this.innerHTML = html;
-      }
+    if (this.#display === 'markdown') {
+      this.textContent = this.#markdown;
+    } else if (this.#display === 'html') {
+      this.textContent = html;
+    } else {
+      this.innerHTML = html;
     }
   }
 
@@ -375,33 +310,13 @@ export default class AMarkdown extends HTMLElement {
    * Converts the inline markdown content into a Blob URL and triggers the main render method.
    */
   renderInlineMarkdown() {
-    if (this.debug) {
-      console.groupCollapsed('renderInlineMarkdown()');
-    }
-
-    const content = this.dedent(this.textContent);
-
-    if (this.debug) {
-      console.groupCollapsed('content');
-        console.log(content);
-        console.groupEnd();
-    }
-
     // Create a Blob from the inline content
-    const blob = new Blob([content], { type: 'text/markdown' });
+    const blob = new Blob([this.textContent], { type: 'text/markdown' });
     // Create a URL for the Blob
     this.#blobUrl = URL.createObjectURL(blob);
     // Set the file attribute to the Blob URL, which will be handled by the render() method
     this.file = this.#blobUrl;
-    if (this.debug) {
-      console.log('blobUrl', this.#blobUrl);
-      console.log('this.file', this.file);
-      console.groupCollapsed('content');
-        console.log(content);
-        console.groupEnd();
-      console.groupEnd();
-    }
-    this.debounceRender();
+    this.render();
   }
 
   sanitize(value) {
@@ -417,17 +332,13 @@ export default class AMarkdown extends HTMLElement {
   }
 
   setOption(event) {
+    console.log(event)
     if (this.debug) {
       console.groupCollapsed('setOption()');
       console.log('event', event);
       console.log('event target', event.target);
     }
-    const { name, value } = event.target;
-
-    if (!name) {
-      return console.error('event target must have a "name" attribute that points to a property of a-markdown');
-    }
-
+    const {name, value} = event.target;
     if (this.debug) {
       console.log('name', name);
       console.log('value', value);
@@ -447,10 +358,10 @@ export default class AMarkdown extends HTMLElement {
       console.groupEnd();
     }
 
-    this.debounceRender();
+    this.render();
   }
 
-  transformData(converter, markdown, cacheKey) {
+  transformData(converter, markdown) {
     if (this.debug) {
       console.groupCollapsed('transformData()');
       console.log('converter options', converter.getOptions());
@@ -458,20 +369,20 @@ export default class AMarkdown extends HTMLElement {
 
     let html;
 
+    markdown = this.sanitize(markdown);
+
     if (this.debug) {
       console.groupCollapsed('markdown');
-      console.log(markdown);
-      console.groupEnd();
+        console.log(markdown);
+        console.groupEnd();
     }
 
     try {
       html = converter.makeHtml(markdown);
-
-      html = this.sanitize(html);
       if (this.debug) {
         console.groupCollapsed('html');
-        console.log(html);
-        console.groupEnd();
+          console.log(html);
+          console.groupEnd();
         console.groupEnd();
       }
     } catch (error) {
@@ -480,16 +391,16 @@ export default class AMarkdown extends HTMLElement {
       throw error;
     }
 
-    AMarkdown.fileCache.set(cacheKey, html);
+    AMarkdown.fileCache.set(this.file, html);
     return html;
   }
 
-  get debug() { return this.#debug; }
-  set debug(value) { this.setAttribute('debug', value); }
+  get debug() { return this.#debug }
+  set debug(value) { this.setAttribute('debug', value) }
 
-  get display() { return this.#display; }
+  get display() { return this.#display }
   set display(value) {
-    this.setAttribute('display', value);
+    this.setAttribute('display', value)
   }
 
   /**
@@ -508,7 +419,7 @@ export default class AMarkdown extends HTMLElement {
    * Gets whether the `nocache` attribute is present.
    * @returns {boolean}
    */
-  get nocache() { return this.hasAttribute('nocache'); }
+  get nocache() { return this.hasAttribute('nocache') }
 
   /**
    * Sets or removes the `nocache` attribute.
@@ -518,23 +429,24 @@ export default class AMarkdown extends HTMLElement {
     this.toggleAttribute('nocache', !!value);
   }
 
-  get options() { return this.#options; }
+  get options() { return this.#options }
   set options(value) {
-    this.setAttribute('options', JSON.stringify(value));
+    this.setAttribute('options', JSON.stringify(value))
   }
 
   /**
    * Gets the value of the `showdown-url` attribute.
    * @returns {string | null}
    */
-  get showdownUrl() { return this.getAttribute('showdown-url'); }
+  get showdownUrl() { return this.getAttribute('showdown-url') }
 
   /**
    * Sets the value of the `showdown-url` attribute.
    * @param {string} value - The URL of the Showdown library.
    */
-  set showdownUrl(value) { this.setAttribute('showdown-url', value); }
+  set showdownUrl(value) { this.setAttribute('showdown-url', value) }
 }
+
 
 // Define the custom element if it hasn't been defined already.
 if (!customElements.get('a-markdown')) {

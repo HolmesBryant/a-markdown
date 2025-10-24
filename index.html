@@ -39,6 +39,24 @@
 		</details>
 	</header>
 
+	<section>
+
+		<check-box
+			input-id="tables"
+			label="tables"
+			value="true"
+			bind="a-markdown#option-tables:options.tables"
+			tooltip="(boolean) [default false] Enable support for tables syntax.">
+		</check-box>
+
+		<a-markdown debug id="option-tables">
+			| Heading One | Heading Two | Heading Three |
+			| :---------- | :---------: | ------------: |
+			| Cell A 1    | Cell A 2    | Cell A 3      |
+			| Cell B 1    | Cell B 2    | Cell B 3      |
+		</a-markdown>
+	</section>
+
 
 	<section id="demo">
 	<h2>Demo</h2>
