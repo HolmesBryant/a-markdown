@@ -1,542 +1,631 @@
 /**
  * @class AMarkdown
  * @extends HTMLElement
- * @author Holmes Bryant <https://github.com/HolmesBryant>
+ * @author Holmes Bryant https://github.com/HolmesBryant
  * @license MIT
- * @version 2.1.0
+ * @version 1.0.0
  * @summary A custom HTML element that fetches, converts and displays a Markdown file or inline Markdown content as HTML.
- *
- * @description
- * The `a-markdown` element fetches a markdown file from a specified URL or uses the inline content,
- * converts it to HTML using the Showdown.js library, and renders the result.
- * It provides caching capabilities to avoid re-fetching and re-converting content
- * and allows for customization of the Showdown library URL.
- *
- * @example
- * <!-- Basic usage with a file -->
- * <a-markdown file="path/to/your/markdown.md"></a-markdown>
- *
- * @example
- * <!-- Basic usage with inline Markdown -->
- * <a-markdown>
- *   # This is a heading
- *
- *   This is a paragraph with some **bold** text.
- * </a-markdown>
- *
- * @example
- * <!-- Disable caching -->
- * <a-markdown nocache file="path/to/another/markdown.md"></a-markdown>
- *
- * @example
- * <!-- Use a different version of Showdown -->
- * <a-markdown
- *   file="path/to/content.md"
- *   showdown-url="https://cdn.jsdelivr.net/npm/showdown@2.0.0/+esm">
- * </a-markdown>
- */
+*/
 export default class AMarkdown extends HTMLElement {
   // Attributes
 
-  #debug = false;
+  /**
+   * Whether to remove leading whitespace from the markdown content.
+   * @private
+   * @type {boolean}
+   * @default true
+  */
+  #dedent = true;
 
   /**
-   * 'converted', 'markdown', 'html'
-   */
+   *How to display the content. Can be 'converted', 'markdown', or 'html'.
+   *@private
+   *@type {string}
+   *@default 'converted'
+  */
   #display = 'converted';
 
+  /**
+   * The URL of the markdown file to fetch.
+   * @private
+   * @type {string | undefined}
+  */
   #file;
 
+  /**
+   * Whether to bypass the cache when fetching the markdown file.
+   * @private
+   * @type {boolean}
+   * @default false
+  */
+  #nocache = false;
+
+  /**
+   * Options to pass to the Showdown converter.
+   * @private
+   * @type {object}
+   * @see https://github.com/showdownjs/showdown#options
+  */
   #options = {
-    tables: true,
-    strikethrough: true,
-    simpleLineBreaks: true
+  tables: true,
+  strikethrough: true,
+  simpleLineBreaks: true
   };
 
   /**
-   * The URL to import the Showdown ES module from.
+   * Whether to sanitize the converted HTML using DOMPurify.
+   * @private
+   * @type {boolean}
+   * @default false
+  */
+  #sanitize = false;
+
+  /**
+   * The URL to load the Showdown library from.
    * @private
    * @type {string}
-   */
+  */
   #showdownUrl = 'https://cdn.jsdelivr.net/npm/showdown@2.1.0/+esm';
 
-  // Properties
-
-  #abortController;
-  #blobUrl;
   /**
-   * Holds the singleton instance of the Showdown converter.
+   * The URL to load the DOMPurify library from.
    * @private
-   * @type {object | null}
+   * @type {string}
+  */
+  #dompurifyUrl = 'https://cdn.jsdelivr.net/npm/dompurify@3.3.0/+esm';
+
+  // Private Properties
+  /**
+   * Abort controller for fetch requests.
+   * @private
+   * @type {AbortController | undefined}
+  */
+  #abortController;
+
+  /**
+   * The URL created from inline markdown content.
+   * @private
+   * @type {string | undefined}
    */
+  #blobUrl;
+
+  /**
+   * The key used for caching the converted HTML.
+   * @private
+   * @type {string | undefined}
+  */
+  #cacheKey;
+
+  /**
+   * The Showdown converter instance.
+   * @private
+   * @type {object | undefined}
+  */
   #converter;
+
+  /**
+   * The DOMPurify instance.
+   * @private
+   * @type {object | undefined}
+  */
+  #dompurify;
+
+  /**
+   * Whether the component has been initialized.
+   * @private
+   * @type {boolean}
+  */
   #initialized = false;
+
+  /**
+   * Whether the component is currently initializing.
+   * @private
+   * @type {boolean}
+  */
+  #isInitializing = false;
+
+  /**
+   * The fetched markdown content.
+   * @private
+   * @type {string | undefined}
+  */
   #markdown;
+
+  /**
+   * The mutation observer for inline content changes.
+   * @private
+   * @type {MutationObserver | undefined}
+  */
+  #mutationObserver;
+
+  /**
+   * The ID of the render debounce timeout.
+   * @private
+   * @type {number | null}
+  */
   #renderDebounceId = null;
+
+  /**
+   * The Showdown library module.
+   * @private
+   * @type {object | undefined}
+  */
   #showdown;
 
-  static #ta = document.createElement('textarea');
+  // Public Static Properties
 
   /**
-   * A static cache to store the HTML content of fetched files or inline content.
-   * The key is a composite of the Showdown URL and the file URL.
+   * A cache for converted markdown files.
    * @static
    * @type {Map<string, string>}
-   */
+  */
   static fileCache = new Map();
 
   /**
-   * An array of attribute names to observe for changes.
-   * The `attributeChangedCallback` will be invoked when these attributes change.
+   * The observed attributes for the custom element.
    * @static
-   * @returns {string[]}
-   */
+   * @type {string[]}
+  */
   static observedAttributes = [
-    'debug',
+    'dedent',
     'display',
+    'dompurify-url',
     'file',
     'nocache',
     'options',
-    'showdown-url'
+    'sanitize',
+    'showdown-url',
   ];
 
   /**
-   * Initializes the component.
-   */
+   * Creates an instance of AMarkdown.
+  */
   constructor() {
     super();
   }
 
-  /**
-   * A lifecycle callback invoked when one of the observed attributes changes.
-   * @param {string} attr - The name of the attribute that changed.
-   * @param {string} oldval - The old attribute value.
-   * @param {string} newval - The new attribute value.
-   */
-  attributeChangedCallback(attr, oldval, newval) {
-    if (this.debug) {
-      console.groupCollapsed(`attributeChangedCallback(${attr})`);
-      console.log('oldval', oldval);
-      console.log('newval', newval);
-    }
+  // Lifecycle
 
-    if (oldval === newval) return;
+  /**
+   * Called when the element is added to the document.
+   * @private
+  */
+  connectedCallback() {
+    this.#abortController = new AbortController();
+    this.#setMutationObserver();
+    this.#init();
+  }
+
+  /**
+   * Called when the element is removed from the document.
+   * @private
+  */
+  disconnectedCallback() {
+    if (this.#blobUrl) URL.revokeObjectURL(this.#blobUrl);
+    if (this.#renderDebounceId) clearTimeout(this.#renderDebounceId);
+    if (this.#mutationObserver) this.#mutationObserver.disconnect();
+    this.#abortController?.abort();
+  }
+
+  /**
+   * Called when an observed attribute changes.
+   * @private
+   * @param {string} attr The attribute name.
+   * @param {string} oldval The old attribute value.
+   * @param {string} newval The new attribute value.
+  */
+  attributeChangedCallback(attr, oldval, newval) {
+    if (oldval === newval || !this.#initialized) return;
+
+    const reInit = new Set(['file', 'showdown-url']);
+    const reRender = new Set(['dedent', 'display', 'dompurify-url', 'nocache', 'options', 'sanitize']);
 
     switch (attr) {
-      case 'debug':
-        this.#debug = newval !== 'false';
-        if (this.debug) console.log(attr, this[attr]);
+      case 'dedent':
+        this.#dedent = newval !== null && newval !== 'false';
         break;
       case 'display':
         this.#display = newval;
-        if (this.debug) console.log(attr, this[attr]);
+        break;
+      case 'dompurify-url':
+        this.#dompurifyUrl = newval;
+        this.#dompurify = null; // Invalidate to reload
+        break;
+      case 'file':
+        this.#file = newval;
+        break;
+      case 'nocache':
+        this.#nocache = newval !== null && newval !== 'false';
         break;
       case 'options':
         try {
-          const opts = JSON.parse(newval);
-          for (const opt in opts) {
-            opts[opt] = opts[opt] !== 'false' && opts[opt] !== false;
-          }
-          this.#options = { ...this.#options, ...opts };
-          this.#converter = null;
-          if (this.debug) console.log(attr, this.#options);
+          this.#options = { ...this.#options, ...JSON.parse(newval) };
+          this.#converter = null; // Invalidate to recreate
         } catch (error) {
-          console.error('Failed to parse "options" attribute. Please provide a valid JSON string.', error);
+          console.error('Failed to parse "options" attribute.', error);
         }
+        break;
+      case 'sanitize':
+        this.#sanitize = newval !== null && newval !== 'false';
         break;
       case 'showdown-url':
         this.#showdownUrl = newval;
-        this.#converter = null; // Reset converter to force re-import
-        if (this.debug) console.log(attr, this.showdownUrl);
+        this.#showdown = null; // Invalidate to reload
+        this.#converter = null;
         break;
     }
 
-    if (this.debug) {
-      console.groupEnd();
+    if (reInit.has(attr)) {
+      this.#init();
+    } else if (reRender.has(attr)) {
+      this.#debounceRender();
     }
-    this.debounceRender();
   }
 
-  /**
-   * A lifecycle callback invoked when the element is added to the DOM.
-   */
-  connectedCallback() {
-    this.#abortController = new AbortController();
-    // Check if the element has a file attribute. If not, check for inline markdown.
-    if (!this.hasAttribute('file') && this.textContent.trim().length > 0) {
-      this.renderInlineMarkdown();
+  // Public
+
+  setOption(event) {
+    const checkable = ['checkbox', 'radio'];
+    let {name, value} = event.target;
+
+    if (!name) {
+      console.error('setOption requires that event.target has a `name` attribute');
+    }
+
+    if (checkable.indexOf(event.target.type) > -1) {
+      value = event.target.checked;
     } else {
-      this.debounceRender();
+      value = value !== null && value !== 'false';
     }
-  }
 
-  /**
-   * A lifecycle callback invoked when the element is removed from the DOM.
-   * Used here to clean up the Blob URL and prevent memory leaks.
-   */
-  disconnectedCallback() {
-    if (this.#blobUrl) URL.revokeObjectURL(this.#blobUrl);
-    this.#abortController.abort();
-    this.#abortController = null;
-    this.#blobUrl = null;
+    const [prop, sub] = name.split('.');
+
+    if (sub) {
+      this[prop][sub] = event.target.value;
+    } else {
+      this[prop] = value;
+    }
+
     this.#converter = null;
-    this.#showdown = null;
-    if (this.#renderDebounceId) {
-      clearTimeout(this.#renderDebounceId);
+    AMarkdown.fileCache.delete(this.#cacheKey)
+    this.#init();
+  }
+
+  // Private
+
+  /**
+   * Initializes the component by fetching and rendering the markdown.
+   * @private
+   * @async
+   */
+  async #init() {
+    if (this.#isInitializing) return;
+    this.#isInitializing = true;
+
+    // Prioritize the 'file' attribute as the source of truth
+    this.#file = this.getAttribute('file');
+
+    if (!this.#file && this.textContent.trim().length > 0) {
+      if (this.#blobUrl) URL.revokeObjectURL(this.#blobUrl);
+      this.#file = this.#convertToBlobUrl(this.textContent);
+    }
+
+    if (!this.#file) {
+        this.#displayError("A 'file' attribute or inline content is required.");
+        this.#isInitializing = false;
+        // Mark as initialized to allow future attribute changes
+        this.#initialized = true;
+        return;
+    }
+
+    this.#cacheKey = `${this.#showdownUrl}:${this.#file}`;
+
+    try {
+      // Ensure Showdown and the converter are ready
+      if (!this.#showdown) this.#showdown = await this.#getShowdown();
+      if (!this.#converter) this.#converter = this.#getConverter(this.#showdown);
+
+      // Fetch the markdown content
+      this.#markdown = await this.#getFile(this.#file);
+
+      // Now render
+      await this.#render();
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        this.#displayError(error.message);
+        console.error("Initialization failed", error);
+      }
+    } finally {
+        this.#initialized = true;
+        this.#isInitializing = false;
     }
   }
 
   /**
-   * Debounces the render method to prevent rapid, successive calls.
-   * @param {number} [delay=50] - The debounce delay in milliseconds.
-   */
-  debounceRender(delay = 50) {
-    if (this.debug) {
-      console.groupCollapsed('debounceRender()');
-      console.log('delay', delay);
-      console.groupEnd();
-    }
-
-    if (this.#renderDebounceId) {
-      clearTimeout(this.#renderDebounceId);
-    }
-    this.#renderDebounceId = setTimeout(() => {
-      this.render();
-      this.#renderDebounceId = null;
-    }, delay);
+   * Converts a string to a blob URL.
+   * @param {string} str The string to convert.
+   * @returns {string} The blob URL.
+   * @private
+  */
+  #convertToBlobUrl(str) {
+    const blob = new Blob([str], { type: 'text/markdown' });
+    return URL.createObjectURL(blob);
   }
 
-  dedent(str) {
-    const lines = str.split('\n');
+  /**
+   * Debounces the render method.
+   * @param {number} [delay=50] The debounce delay in milliseconds.
+   * @private
+  */
+  #debounceRender(delay = 50) {
+    clearTimeout(this.#renderDebounceId);
+    this.#renderDebounceId = setTimeout(() => this.#render(), delay);
+  }
 
-    // Find the minimum indentation of non-empty lines
+  /**
+   * Displays an error message in the element.
+   * @param {string} message The error message.
+   * @private
+  */
+  #displayError(message) {
+    this.innerHTML = `<p class="error"><strong>Error:</strong> ${message}</p>`;
+  }
+
+  /**
+   * Removes leading whitespace from a string.
+   * @param {string} str The string to dedent.
+   * @returns {string} The dedented string.
+   * @private
+  */
+  #doDedent(str) {
+    const lines = (str || '').split('\n');
     let minIndent = null;
+
     for (const line of lines) {
-      // Only consider lines with content
       if (line.trim().length > 0) {
         const indentMatch = line.match(/^(\s*)/);
-        const currentIndent = indentMatch[0].length;
+        const currentIndent = indentMatch?.[0].length ?? 0;
         if (minIndent === null || currentIndent < minIndent) {
           minIndent = currentIndent;
         }
       }
     }
-
-    // If there's a common indentation, remove it from all lines
-    if (minIndent && minIndent > 0) {
-      str = lines.map(line => line.substring(minIndent)).join('\n');
-    }
-
-    return str;
+    return (minIndent > 0) ? lines.map(line => line.substring(minIndent)).join('\n') : str;
   }
 
   /**
-   * Displays an error message inside the component's content.
-   * @param {string} message - The error message to display.
-   */
-  displayError(message) {
-    this.innerHTML = `<p class="error"><strong>Error:</strong> ${message}</p>`;
-  }
-
-  getMetadata() {
-    if (!this.#converter) return;
-    return this.#converter.getMetadata();
+   * Sanitizes HTML using DOMPurify.
+   * @param {string} html The HTML to sanitize.
+   * @returns {Promise<string>} The sanitized HTML.
+   * @private
+   * @async
+  */
+  async #doSanitize(html) {
+    if (!this.#dompurify) {
+      try {
+        const mods = await import(this.#dompurifyUrl);
+        this.#dompurify = mods.default;
+      } catch (error) {
+        throw new Error('Could not load DOMPurify', { cause: error });
+      }
+    }
+    return this.#dompurify.sanitize(html);
   }
 
   /**
-   * Lazily loads the Showdown converter. The converter is imported and instantiated
-   * only on the first call, and the instance is cached for subsequent calls.
-   * @returns {Promise<object>} A promise that resolves to the Showdown converter instance.
-   * @throws {Error} If the Showdown library fails to load.
-   */
-  async getConverter() {
-    if (!this.nocache && this.#converter) return this.#converter;
-
-    try {
-      const showdown = await this.getShowdown();
-      this.#converter = new showdown.Converter(this.#options);
-      return this.#converter;
-    } catch (error) {
-      throw new Error('Could not load the markdown converter library.');
-    }
+   * Gets the Showdown converter instance.
+   * @param {object} showdown The Showdown library module.
+   * @returns {object} The Showdown converter instance.
+   * @private
+  */
+  #getConverter(showdown) {
+    if (!this.#nocache && this.#converter) return this.#converter;
+    return new showdown.Converter(this.#options);
   }
 
   /**
-   * Fetches the content of the markdown file specified by the URL.
-   * @param {string} fileUrl - The URL of the file to fetch.
-   * @returns {Promise<string>} A promise that resolves to the text content of the file.
-   * @throws {Error} If the file cannot be found or the fetch request fails.
-   */
-  async getFile(fileUrl) {
-    const options = {
-      method: 'GET',
-      headers: {},
-      signal: this.#abortController.signal
-    };
-
-    if (this.nocache) {
-      // ignore the browser cache
-      options.cache = 'reload';
-      options.headers['Cache-Control'] = 'no-store, no-cache';
-    }
+   * Fetches the markdown file.
+   * @param {string} fileUrl The URL of the markdown file.
+   * @returns {Promise<string>} The markdown content.
+   * @private
+   * @async
+  */
+  async #getFile(fileUrl) {
+    const options = { method: 'GET', signal: this.#abortController.signal };
+    if (this.#nocache) options.cache = 'reload';
 
     const response = await fetch(fileUrl, options);
     if (!response.ok) {
+
       throw new Error(`File not found at ${fileUrl}`);
     }
     return response.text();
   }
 
-  async getShowdown() {
-    if (!this.nocache && this.#showdown) return this.#showdown;
+  /**
+   * Gets the Showdown library module.
+   * @returns {Promise<object>} The Showdown library module.
+   * @private
+   * @async
+  */
+  async #getShowdown() {
     try {
       const mods = await import(this.#showdownUrl);
-      this.#showdown = mods.default;
-      return this.#showdown;
+      return mods.default;
     } catch (error) {
-      throw new Error('Could not import Showdown');
+      throw new Error('Could not import Showdown', { cause: error });
     }
   }
 
   /**
-   * The main rendering function. It coordinates the fetching of the markdown file
-   * (or inline content via Blob URL) and the converter, performs the conversion, and renders the result.
-   * It handles caching to avoid redundant operations.
-   * @returns {Promise<void>}
-   */
-  async render() {
-    if (this.debug) {
-      console.groupCollapsed('render()');
-      console.log('file', this.file);
-      console.log('blobUrl', this.#blobUrl);
-      console.log('display', this.display);
-    }
-
-    let html;
-
-    if (!this.file) {
-      this.displayError('No file was provided or inline markdown found.');
-      if (this.debug) console.groupEnd();
+   * Renders the markdown content.
+   * @private
+   * @async
+  */
+  async #render() {
+    if (!this.#markdown || !this.#converter) {
+      if (!this.#markdown) return console.error('no markdown text at time of render');
+      if (!this.#converter) return console.error('no converter at time of render');
       return;
     }
 
-    const cacheKey = `${this.#showdownUrl}:${this.file}`;
+    let html;
+    const cacheExists = !this.#nocache && AMarkdown.fileCache.has(this.#cacheKey);
 
-    // Use cached content if available and caching is not disabled
-    if (!this.nocache && AMarkdown.fileCache.has(cacheKey)) {
-      html = AMarkdown.fileCache.get(cacheKey);
+    if (cacheExists) {
+      html = AMarkdown.fileCache.get(this.#cacheKey);
     } else {
-      try {
-        // Fetch the converter and file content concurrently
-        const [converter, markdown] = await Promise.all([
-          this.getConverter(),
-          this.getFile(this.file)
-        ]);
-
-        this.#markdown = markdown;
-        html = this.transformData(converter, markdown, cacheKey);
-
-        if (this.debug) {
-          console.log('showdown', this.#showdown);
-          console.log('converter', converter);
-          console.log('converter options', converter?.getOptions());
-          console.groupCollapsed('markdown');
-            console.log(markdown);
-            console.groupEnd();
-          console.groupCollapsed('html');
-            console.log(html);
-            console.groupEnd();
-          console.groupEnd();
-        }
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error(error);
-          this.displayError(error.message);
-        }
-        if (this.debug) console.groupEnd();
-        return; // Stop execution on error
-      }
+      html = await this.#transformData(this.#converter, this.#markdown);
+      AMarkdown.fileCache.set(this.#cacheKey, html);
     }
 
-    if (this.isConnected) { // Ensure the element is still in the DOM
+    if (this.isConnected) {
       if (this.#display === 'markdown') {
         this.textContent = this.#markdown;
       } else if (this.#display === 'html') {
         this.textContent = html;
       } else {
-        // SECURITY NOTE: The XSS vulnerability still exists here.
-        // This should be replaced with a safe HTML rendering mechanism.
         this.innerHTML = html;
       }
     }
   }
 
   /**
-   * Converts the inline markdown content into a Blob URL and triggers the main render method.
-   */
-  renderInlineMarkdown() {
-    if (this.debug) {
-      console.groupCollapsed('renderInlineMarkdown()');
-    }
-
-    const content = this.dedent(this.textContent);
-
-    if (this.debug) {
-      console.groupCollapsed('content');
-        console.log(content);
-        console.groupEnd();
-    }
-
-    // Create a Blob from the inline content
-    const blob = new Blob([content], { type: 'text/markdown' });
-    // Create a URL for the Blob
-    this.#blobUrl = URL.createObjectURL(blob);
-    // Set the file attribute to the Blob URL, which will be handled by the render() method
-    this.file = this.#blobUrl;
-    if (this.debug) {
-      console.log('blobUrl', this.#blobUrl);
-      console.log('this.file', this.file);
-      console.groupCollapsed('content');
-        console.log(content);
-        console.groupEnd();
-      console.groupEnd();
-    }
-    this.debounceRender();
-  }
-
-  sanitize(value) {
-    const ta = AMarkdown.#ta;
-    ta.textContent = value;
-    return ta.textContent;
-  }
-
-  setFlavor(value) {
-    if (!this.#converter) return;
-    this.#options.flavor = value;
-    this.#converter.setFlavor(value);
-  }
-
-  setOption(event) {
-    if (this.debug) {
-      console.groupCollapsed('setOption()');
-      console.log('event', event);
-      console.log('event target', event.target);
-    }
-    const { name, value } = event.target;
-
-    if (!name) {
-      return console.error('event target must have a "name" attribute that points to a property of a-markdown');
-    }
-
-    if (this.debug) {
-      console.log('name', name);
-      console.log('value', value);
-    }
-
-    const [prop, sub] = name.split('.');
-
-    if (this.debug) {
-      console.log('prop', prop);
-      console.log('sub', sub);
-    }
-
-    this.options[sub] = event.target.checked;
-
-    if (this.debug) {
-      console.log(`options[${sub}]`, this.options[sub]);
-      console.groupEnd();
-    }
-
-    this.debounceRender();
-  }
-
-  transformData(converter, markdown, cacheKey) {
-    if (this.debug) {
-      console.groupCollapsed('transformData()');
-      console.log('converter options', converter.getOptions());
-    }
-
-    let html;
-
-    if (this.debug) {
-      console.groupCollapsed('markdown');
-      console.log(markdown);
-      console.groupEnd();
-    }
-
-    try {
-      html = converter.makeHtml(markdown);
-
-      html = this.sanitize(html);
-      if (this.debug) {
-        console.groupCollapsed('html');
-        console.log(html);
-        console.groupEnd();
-        console.groupEnd();
+   * Sets up the mutation observer to watch for inline content changes.
+   * @private
+  */
+  #setMutationObserver() {
+    const callback = () => {
+      if (!this.hasAttribute('file')) {
+        this.#init();
       }
-    } catch (error) {
-      if (this.debug) console.groupEnd();
-      this.displayError(`Error transforming markdown. ${error.message}`);
-      throw error;
-    }
-
-    AMarkdown.fileCache.set(cacheKey, html);
-    return html;
-  }
-
-  get debug() { return this.#debug; }
-  set debug(value) { this.setAttribute('debug', value); }
-
-  get display() { return this.#display; }
-  set display(value) {
-    this.setAttribute('display', value);
+    };
+    this.#mutationObserver = new MutationObserver(callback);
+    this.#mutationObserver.observe(this, { characterData: true, childList: true, subtree: true });
   }
 
   /**
-   * Gets the value of the `file` attribute.
+   * Transforms markdown to HTML.
+   * @async
+   * @private
+   * @param {object} converter The Showdown converter instance.
+   * @param {string} markdown The markdown content.
+   * @returns {Promise<string>} The converted HTML.
+  */
+  async #transformData(converter, markdown) {
+    let content = this.#dedent ? this.#doDedent(markdown) : markdown;
+    try {
+      let html = converter.makeHtml(content);
+      if (this.#sanitize) {
+        html = await this.#doSanitize(html);
+      }
+      return html;
+    } catch (error) {
+      throw new Error(`Error transforming markdown: ${error.message}`, { cause: error });
+    }
+  }
+
+  // Getters / Setters
+
+  /**
+   * Gets the dedent property.
+   * @returns {boolean}
+  */
+  get dedent() { return this.#dedent; }
+
+  /*
+   * Sets the dedent property.
+   * @param {boolean} value
+  */
+  set dedent(value) { this.toggleAttribute('dedent', !!value); }
+
+  /**
+   * Gets the display property.
+   * @returns {string}
+  */
+  get display() { return this.#display; }
+
+  /*
+   * Sets the display property.
+   * @param {string} value
+  */
+  set display(value) { this.setAttribute('display', value); }
+
+  /**
+   * Gets the dompurify-url property.
+   * @returns {string}
+  */
+  get dompurifyUrl() { return this.#dompurifyUrl; }
+
+  /*
+   * Sets the dompurify-url property.
+   * @param {string} value
+  */
+  set dompurifyUrl(value) { this.setAttribute('dompurify-url', value); }
+
+  /**
+   * Gets the file property.
    * @returns {string | null}
-   */
+  */
   get file() { return this.getAttribute('file'); }
 
-  /**
-   * Sets the value of the `file` attribute.
-   * @param {string} value - The URL of the markdown file.
-   */
+  /*
+   * Sets the file property.
+   * @param {string} value
+  */
   set file(value) { this.setAttribute('file', value); }
 
   /**
-   * Gets whether the `nocache` attribute is present.
+   * Gets the nocache property.
    * @returns {boolean}
-   */
-  get nocache() { return this.hasAttribute('nocache'); }
+  */
+  get nocache() { return this.#nocache; }
+
+  /*
+   * Sets the nocache property.
+   * @param {boolean} value
+  */
+  set nocache(value) { this.toggleAttribute('nocache', !!value); }
 
   /**
-   * Sets or removes the `nocache` attribute.
-   * @param {boolean} value - If true, the attribute is added; otherwise, it is removed.
-   */
-  set nocache(value) {
-    this.toggleAttribute('nocache', !!value);
-  }
-
+   * Gets the options property.
+   * @returns {object}
+  */
   get options() { return this.#options; }
+
+  /*
+   * Sets the options property.
+   * @param {object | string} value
+  */
   set options(value) {
-    this.setAttribute('options', JSON.stringify(value));
+    this.setAttribute('options', typeof value === 'string' ? value : JSON.stringify(value));
   }
 
   /**
-   * Gets the value of the `showdown-url` attribute.
-   * @returns {string | null}
-   */
-  get showdownUrl() { return this.getAttribute('showdown-url'); }
+   * Gets the sanitize property.
+   * @returns {boolean}
+  */
+  get sanitize() { return this.#sanitize; }
+
+  /*
+   * Sets the sanitize property.
+   * @param {boolean} value
+  */
+  set sanitize(value) { this.toggleAttribute('sanitize', !!value); }
 
   /**
-   * Sets the value of the `showdown-url` attribute.
-   * @param {string} value - The URL of the Showdown library.
-   */
+   * Gets the showdown-url property.
+   * @returns {string}
+  */
+  get showdownUrl() { return this.#showdownUrl; }
+
+  /*
+   * Sets the showdown-url property.
+   * @param {string} value
+  */
   set showdownUrl(value) { this.setAttribute('showdown-url', value); }
 }
 
-// Define the custom element if it hasn't been defined already.
 if (!customElements.get('a-markdown')) {
-  customElements.define('a-markdown', AMarkdown);
+customElements.define('a-markdown', AMarkdown);
 }

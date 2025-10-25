@@ -64,6 +64,7 @@ export default class CheckBox extends HTMLElement {
 		const html = `
 		<style>
 			:host {
+				--gap: 1rem;
 				display: block;
 			}
 
@@ -81,7 +82,7 @@ export default class CheckBox extends HTMLElement {
 			}
 		</style>
 
-		<div class="flex">
+		<div class="flex"">
 			${bind ? bind : ''}
 			<input
 				type="checkbox"
@@ -96,7 +97,7 @@ export default class CheckBox extends HTMLElement {
 				${this.label}
 			</label>
 
-			<a-tooltip>
+			<a-tooltip position="modal">
 				${this.tooltip}
 			</a-tooltip>
 		</div>
