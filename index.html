@@ -35,7 +35,7 @@
 		<p> A component that renders Markdown formatted text as HTML </p>
 		<details id="readme">
 			<summary>README</summary>
-			<a-markdown file="README.md"></a-markdown>
+			<!-- <a-markdown file="README.md"></a-markdown> -->
 		</details>
 	</header>
 
@@ -61,54 +61,54 @@
 
 		<div class="card flex space-between">
 		<!-- strikethrough -->
-			<!-- <check-box
+			<check-box
 				input-id="strikethrough"
 				label="strikethrough"
 				value="true"
 				bind="a-markdown#option-strikethrough:options.strikethrough"
 				tooltip="(boolean) [default false] Enable support for strikethrough syntax. ~~strikethrough~~ as <del>strikethrough</del>">
-			</check-box> -->
+			</check-box>
 
-			<!-- <a-markdown id="option-strikethrough">
+			<a-markdown id="option-strikethrough">
 				~~Some strikethrough text~~
-			</a-markdown> -->
+			</a-markdown>
 		</div>
 
 		<div class="card flex space-between">
 		<!-- simpleLineBreaks -->
-			<!-- <check-box
+			<check-box
 				input-id="simpleLineBreaks"
 				label="simpleLineBreaks"
 				value="true"
 				bind="a-markdown#option-simpleLineBreaks:options.simpleLineBreaks"
 				tooltip="(boolean) [default false] Parses single line breaks as &lt; br &gt;, like GitHub does, without needing a blank line between lines of text.">
-			</check-box> -->
+			</check-box>
 
-			<!-- <a-markdown id="option-simpleLineBreaks">
+			<a-markdown id="option-simpleLineBreaks">
 				line one.
 				line two.
 				line three.
-			</a-markdown> -->
+			</a-markdown>
 		</div>
 
 		<div class="card flex space-between">
-			<!-- <check-box
+			<check-box
 				input-id="ghCodeBlocks"
 				label="ghCodeBlocks"
 				value="true"
 				bind="a-markdown#option-ghCodeBlocks:options.ghCodeBlocks"
 				tooltip="(boolean) [default true] Enable support for GFM code block style.">
-			</check-box> -->
+			</check-box>
 
-			<!-- <a-markdown
+			<a-markdown
 				debug
 				id="option-ghCodeBlocks"
 				dedent="false"
-				display="converted">
+				display="html">
 					// code block
 					var foo = 'bar';
 					console.log(foo);
-			</a-markdown> -->
+			</a-markdown>
 		</div>
 	</section>
 

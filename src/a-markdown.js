@@ -47,9 +47,7 @@ export default class AMarkdown extends HTMLElement {
    * @see https://github.com/showdownjs/showdown#options
   */
   #options = {
-  tables: true,
-  strikethrough: true,
-  simpleLineBreaks: true
+  tables: true
   };
 
   /**
@@ -215,7 +213,7 @@ export default class AMarkdown extends HTMLElement {
    * @param {string} newval The new attribute value.
   */
   attributeChangedCallback(attr, oldval, newval) {
-    if (oldval === newval || !this.#initialized) return;
+    if (oldval === newval) return;
 
     const reInit = new Set(['file', 'showdown-url']);
     const reRender = new Set(['dedent', 'display', 'dompurify-url', 'nocache', 'options', 'sanitize']);
@@ -240,7 +238,13 @@ export default class AMarkdown extends HTMLElement {
       case 'options':
         try {
           this.#options = { ...this.#options, ...JSON.parse(newval) };
-          this.#converter = null; // Invalidate to recreate
+          // Invalidate to recreate
+          this.#converter = null;
+          if (window.abind) {
+            for (const opt in this.#options) {
+              // abind.update(this, `options.${opt}`, this.#options[opt]);
+            }
+          }
         } catch (error) {
           console.error('Failed to parse "options" attribute.', error);
         }
@@ -258,7 +262,7 @@ export default class AMarkdown extends HTMLElement {
     if (reInit.has(attr)) {
       this.#init();
     } else if (reRender.has(attr)) {
-      this.#debounceRender();
+      if (this.#converter) this.#debounceRender();
     }
   }
 
@@ -278,68 +282,22 @@ export default class AMarkdown extends HTMLElement {
       value = value !== null && value !== 'false';
     }
 
+
     const [prop, sub] = name.split('.');
 
     if (sub) {
-      this[prop][sub] = event.target.value;
+      this[prop][sub] = value;
     } else {
       this[prop] = value;
     }
 
     this.#converter = null;
-    AMarkdown.fileCache.delete(this.#cacheKey)
+    AMarkdown.fileCache.delete(this.#cacheKey);
+    if (this.debug) this.#doDebug('setOption');
     this.#init();
   }
 
   // Private
-
-  /**
-   * Initializes the component by fetching and rendering the markdown.
-   * @private
-   * @async
-   */
-  async #init() {
-    if (this.#isInitializing) return;
-    this.#isInitializing = true;
-
-    // Prioritize the 'file' attribute as the source of truth
-    this.#file = this.getAttribute('file');
-
-    if (!this.#file && this.textContent.trim().length > 0) {
-      if (this.#blobUrl) URL.revokeObjectURL(this.#blobUrl);
-      this.#file = this.#convertToBlobUrl(this.textContent);
-    }
-
-    if (!this.#file) {
-        this.#displayError("A 'file' attribute or inline content is required.");
-        this.#isInitializing = false;
-        // Mark as initialized to allow future attribute changes
-        this.#initialized = true;
-        return;
-    }
-
-    this.#cacheKey = `${this.#showdownUrl}:${this.#file}`;
-
-    try {
-      // Ensure Showdown and the converter are ready
-      if (!this.#showdown) this.#showdown = await this.#getShowdown();
-      if (!this.#converter) this.#converter = this.#getConverter(this.#showdown);
-
-      // Fetch the markdown content
-      this.#markdown = await this.#getFile(this.#file);
-
-      // Now render
-      await this.#render();
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        this.#displayError(error.message);
-        console.error("Initialization failed", error);
-      }
-    } finally {
-        this.#initialized = true;
-        this.#isInitializing = false;
-    }
-  }
 
   /**
    * Converts a string to a blob URL.
@@ -369,6 +327,14 @@ export default class AMarkdown extends HTMLElement {
   */
   #displayError(message) {
     this.innerHTML = `<p class="error"><strong>Error:</strong> ${message}</p>`;
+  }
+
+  #doDebug(method) {
+    console.groupCollapsed(method);
+    for (const attr of this.constructor.observedAttributes) {
+      console.log(attr, this[attr])
+    }
+    console.groupEnd();
   }
 
   /**
@@ -458,6 +424,59 @@ export default class AMarkdown extends HTMLElement {
   }
 
   /**
+   * Initializes the component by fetching and rendering the markdown.
+   * @private
+   * @async
+   */
+  async #init() {
+    if (this.#isInitializing) return;
+    this.#isInitializing = true;
+
+    // Prioritize the 'file' attribute as the source of truth
+    this.#file = this.getAttribute('file');
+
+    if (!this.#file && this.textContent.trim().length > 0) {
+      if (this.#blobUrl) URL.revokeObjectURL(this.#blobUrl);
+      this.#file = this.#convertToBlobUrl(this.textContent);
+    }
+
+    if (!this.#file) {
+        this.#displayError("A 'file' attribute or inline content is required.");
+        this.#isInitializing = false;
+        // Mark as initialized to allow future attribute changes
+        this.#initialized = true;
+        return;
+    }
+
+    this.#cacheKey = `${this.#showdownUrl}:${this.#file}`;
+
+    try {
+      // Ensure Showdown and the converter are ready
+      if (!this.#showdown) this.#showdown = await this.#getShowdown();
+      if (!this.#converter) this.#converter = this.#getConverter(this.#showdown);
+
+      // Fetch the markdown content
+      if (!this.#markdown) {
+        this.#markdown = await this.#getFile(this.#file);
+      }
+
+      // Now render
+      await this.#render();
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        this.#displayError(error.message);
+        console.error("Initialization failed", error);
+      }
+    } finally {
+        this.#initialized = true;
+        this.#isInitializing = false;
+    }
+
+    if (this.#converter) this.options = this.#converter.getOptions();
+
+  }
+
+  /**
    * Renders the markdown content.
    * @private
    * @async
@@ -471,7 +490,6 @@ export default class AMarkdown extends HTMLElement {
 
     let html;
     const cacheExists = !this.#nocache && AMarkdown.fileCache.has(this.#cacheKey);
-
     if (cacheExists) {
       html = AMarkdown.fileCache.get(this.#cacheKey);
     } else {
@@ -479,6 +497,8 @@ export default class AMarkdown extends HTMLElement {
       AMarkdown.fileCache.set(this.#cacheKey, html);
     }
 
+
+    if (this.debug) console.log(this.#display)
     if (this.isConnected) {
       if (this.#display === 'markdown') {
         this.textContent = this.#markdown;
@@ -526,6 +546,9 @@ export default class AMarkdown extends HTMLElement {
   }
 
   // Getters / Setters
+
+  get debug() { return this.hasAttribute('debug') }
+  set debug(value) { this.toggleAttribute('debug', value !== false && value !== 'false') }
 
   /**
    * Gets the dedent property.
