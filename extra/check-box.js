@@ -77,12 +77,20 @@ export default class CheckBox extends HTMLElement {
 			.flex {
 				align-items: center;
 				display: flex;
+				flex: 1;
 				gap: var(--gap);
+			}
+
+			.space-between {
 				justify-content: space-between;
+			}
+
+			#wrapper {
+				width: 100%;
 			}
 		</style>
 
-		<div class="flex"">
+		<div id="wrapper" class="flex">
 			${bind ? bind : ''}
 			<input
 				type="checkbox"
@@ -91,15 +99,17 @@ export default class CheckBox extends HTMLElement {
 				value="${this.value}">
 			${bind ? bindEnd : ''}
 
-			<label
-				for="${this.inputId}"
-				title="${this.tooltip}">
-				${this.label}
-			</label>
+			<div class="flex space-between">
+				<label
+					for="${this.inputId}"
+					title="${this.tooltip}">
+					${this.label}
+				</label>
 
-			<a-tooltip position="modal">
-				${this.tooltip}
-			</a-tooltip>
+				<a-tooltip position="modal">
+					${this.tooltip}
+				</a-tooltip>
+			</div>
 		</div>
 	`;
 

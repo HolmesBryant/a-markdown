@@ -17,8 +17,16 @@
 		.pre
 		{ white-space: pre; }
 
-		#demo-elem {
-			/* border: 1px solid orange; */
+		check-box {
+			display: flex;
+			justify-content: space-between;
+			width: 37%;
+		}
+
+		a-markdown[display="html"] {
+			background-color: var(--bg2-color);
+			font-family: ui-monospace;
+			white-space: pre-wrap;
 		}
 
 		@media (min-width: 640px) {
@@ -32,10 +40,10 @@
 	<p><a href="test.html">testing...</a></p>
 	<header>
 		<h1>a-markdown Web Component</h1>
-		<p> A component that renders Markdown formatted text as HTML </p>
-		<details id="readme">
+		<p> A component that leverages the powerful <a href="https://github.com/showdownjs/showdown" target="_blank">Showdown</a> library to render markdown formatted text as HTML </p>
+		<details open id="readme">
 			<summary>README</summary>
-			<!-- <a-markdown file="README.md"></a-markdown> -->
+			<a-markdown file="README.md"></a-markdown>
 		</details>
 	</header>
 
@@ -47,7 +55,7 @@
 				input-id="tables"
 				label="tables"
 				value="true"
-				bind="a-markdown#option-tables:options.tables"
+				bind="a-markdown#option-tables:tables"
 				tooltip="(boolean) [default false] Enable support for tables syntax.">
 			</check-box>
 
@@ -61,26 +69,26 @@
 
 		<div class="card flex space-between">
 		<!-- strikethrough -->
-			<check-box
+			<!--<check-box
 				input-id="strikethrough"
 				label="strikethrough"
 				value="true"
-				bind="a-markdown#option-strikethrough:options.strikethrough"
+				bind="a-markdown#option-strikethrough:strikethrough"
 				tooltip="(boolean) [default false] Enable support for strikethrough syntax. ~~strikethrough~~ as <del>strikethrough</del>">
 			</check-box>
 
 			<a-markdown id="option-strikethrough">
 				~~Some strikethrough text~~
-			</a-markdown>
+			</a-markdown> -->
 		</div>
 
 		<div class="card flex space-between">
 		<!-- simpleLineBreaks -->
-			<check-box
+			<!-- <check-box
 				input-id="simpleLineBreaks"
 				label="simpleLineBreaks"
 				value="true"
-				bind="a-markdown#option-simpleLineBreaks:options.simpleLineBreaks"
+				bind="a-markdown#option-simpleLineBreaks:simpleLineBreaks"
 				tooltip="(boolean) [default false] Parses single line breaks as &lt; br &gt;, like GitHub does, without needing a blank line between lines of text.">
 			</check-box>
 
@@ -88,27 +96,103 @@
 				line one.
 				line two.
 				line three.
-			</a-markdown>
+			</a-markdown> -->
 		</div>
 
 		<div class="card flex space-between">
-			<check-box
-				input-id="ghCodeBlocks"
-				label="ghCodeBlocks"
+		<!-- noHeaderId -->
+			<!-- <check-box
+				input-id="noHeaderId"
+				label="noHeaderId"
 				value="true"
-				bind="a-markdown#option-ghCodeBlocks:options.ghCodeBlocks"
-				tooltip="(boolean) [default true] Enable support for GFM code block style.">
+				bind="a-markdown#option-noHeaderId:noHeaderId"
+				tooltip="(boolean) [default false] Disable the automatic generation of header ids. Setting to true overrides prefixHeaderId">
 			</check-box>
 
 			<a-markdown
-				debug
-				id="option-ghCodeBlocks"
-				dedent="false"
+				id="option-noHeaderId"
 				display="html">
-					// code block
-					var foo = 'bar';
-					console.log(foo);
-			</a-markdown>
+				# Header One
+				# Header Two
+			</a-markdown> -->
+		</div>
+
+		<div class="card flex space-between">
+		<!-- customizedHeaderId -->
+			<!-- <check-box
+				input-id="customizedHeaderId"
+				label="customizedHeaderId"
+				value="true"
+				bind="a-markdown#option-customizedHeaderId:customizedHeaderId"
+				tooltip="(boolean) [default false] Use text in curly braces as header id.">
+			</check-box>
+
+			<a-markdown
+				id="option-customizedHeaderId"
+				display="html">
+				# header {custom-header}
+			</a-markdown> -->
+		</div>
+
+		<div class="card flex space-between">
+		<!-- ghCompatibleHeaderId -->
+			<!-- <check-box
+				input-id="ghCompatibleHeaderId"
+				label="ghCompatibleHeaderId"
+				value="true"
+				bind="a-markdown#option-ghCompatibleHeaderId:ghCompatibleHeaderId"
+				tooltip="(boolean) [default false] Generate header ids compatible with github style (spaces are replaced with dashes and a bunch of non alphanumeric chars are removed)">
+			</check-box>
+
+			<a-markdown
+				id="option-ghCompatibleHeaderId"
+				display="html">
+				# Header One!
+			</a-markdown> -->
+		</div>
+
+		<div class="card flex space-between">
+		<!-- prefixHeaderId -->
+			<!-- <check-box
+				input-id="prefixHeaderId"
+				label="prefixHeaderId"
+				value="true"
+				bind="a-markdown#option-prefixHeaderId:prefixHeaderId"
+				tooltip="(string/boolean) [default false] Add a prefix to the generated header ids. Passing a string will prefix that string to the header id. Setting to true will add a generic 'section' prefix.">
+			</check-box>
+
+			<a-markdown
+				id="option-prefixHeaderId"
+				display="html">
+				# header One
+			</a-markdown> -->
+		</div>
+
+		<div class="card flex space-between">
+		<!-- parseImgDimensions -->
+			<!-- <check-box
+				input-id="parseImgDimensions"
+				label="parseImgDimensions"
+				value="true"
+				bind="a-markdown#option-parseImgDimensions:parseImgDimensions"
+				tooltip="(boolean) [default false] Enable support for setting image dimensions from within markdown syntax">
+			</check-box>
+
+			<div class="flex column gap0">
+				<a-markdown
+					debug
+					id="option-parseImgDimensions">
+					![iguana](extra/iguana.png =200x80)
+				</a-markdown>
+
+				<a-bind
+					pull
+					model="a-markdown#option-parseImgDimensions"
+					property="markdown">
+
+					<output>...</output>
+				</a-bind> -->
+			</div>
 		</div>
 	</section>
 
@@ -118,108 +202,6 @@
 
 		<div class="flex top">
 			<div id="options" class="flex360">
-
-				<fieldset>
-					<legend>a-markdown options</legend>
-
-					<div class="flex column">
-						<label
-							for="demo-display"
-							title="Display the rendered results, the original markdown, or the raw HTML">
-							display
-						</label>
-
-						<!-- <a-bind
-							model="a-markdown#demo-elem"
-							property="display">
-							<select id="demo-display">
-								<option>converted</option>
-								<option>markdown</option>
-								<option>html</option>
-							</select>
-						</a-bind> -->
-					</div>
-				</fieldset>
-
-				<fieldset>
-				<legend>Showdown Options</legend>
-
-					<div class="flex column gap0">
-						<label for="showdown-flavor">
-							Showdown Flavor
-						</label title="You can use flavors or presets so that showdown behaves like popular markdown flavors.">
-
-						<!-- <a-bind
-							model="a-markdown#demo-elem"
-							property="options.flavor"
-							func="setFlavor">
-
-								<select id="showdown-flavor">
-									<option value="">Select...</option>
-									<option value="original">
-										original (Original Markdown Spec)
-									</option>
-									<option value="vanilla">
-										vanilla (Showdown default options)
-									</option>
-									<option value="github">
-										github (GFM GitHub Flavored Markdown)
-									</option>
-								</select>
-							</a-bind> -->
-					</div>
-
-					<hr>
-
-					<!-- <check-box
-						input-id="omitExtraWLInCodeBlocks"
-						label="omitExtraWLInCodeBlocks"
-						value="true"
-						bind="a-markdown#demo-elem:options.omitExtraWLInCodeBlocks"
-						tooltip="(boolean) [default false] Omit the trailing newline in a code block.">
-					</check-box> -->
-
-					<!-- <check-box
-						input-id="noHeaderId"
-						label="noHeaderId"
-						value="true"
-						bind="a-markdown#demo-elem:options.noHeaderId"
-						tooltip="(boolean) [default false] Disable the automatic generation of header ids. Setting to true overrides prefixHeaderId">
-					</check-box> -->
-
-					<!-- <check-box
-						input-id="customizedHeaderId"
-						label="customizedHeaderId"
-						value="true"
-						bind="a-markdown#demo-elem:options.customizedHeaderId"
-						tooltip="(boolean) [default false] Use text in curly braces as header id.">
-					</check-box> -->
-
-					<!-- <check-box
-						input-id="ghCompatibleHeaderId"
-						label="ghCompatibleHeaderId"
-						value="true"
-						bind="a-markdown#demo-elem:options.ghCompatibleHeaderId"
-						tooltip="(boolean) [default false] Generate header ids compatible with github style (spaces are replaced with dashes and a bunch of non alphanumeric chars are removed)">
-					</check-box> -->
-
-					<!-- <check-box
-						input-id="prefixHeaderId"
-						label="prefixHeaderId"
-						value="true"
-						bind="a-markdown#demo-elem:options.prefixHeaderId"
-						tooltip="(string/boolean) [default false] Add a prefix to the generated header ids. Passing a string will prefix that string to the header id. Setting to true will add a generic 'section' prefix.">
-					</check-box> -->
-
-					<!-- <check-box
-						input-id="parseImgDimensions"
-						label="parseImgDimensions"
-						value="true"
-						bind="a-markdown#demo-elem:options.parseImgDimensions"
-						tooltip="(boolean) [default false] Enable support for setting image dimensions from within markdown syntax">
-					</check-box> -->
-
-
 
 					<!-- <check-box
 						input-id="tablesHeaderId"
@@ -329,8 +311,7 @@
 						tooltip='(boolean) [default false] Split adjacent blockquote blocks.'>
 					</check-box> -->
 
-				</fieldset>
-			</div><!-- /options -->
+
 
 			<!-- <a-markdown
 				nocache
@@ -377,6 +358,7 @@
 
 	</section>
 
+
 	<section>
 	<h2>Quick Start</h2>
 		<a-code highlight>
@@ -394,5 +376,102 @@
 				</html>
 			</textarea>
 		</a-code>
+	</section>
+
+	<!-- ------------------------------------------------ -->
+
+	<section hidden>
+		<!-- deal with later -->
+
+		<div class="flex column">
+		<!-- display -->
+			<!-- <label
+				for="demo-display"
+				title="Display the rendered results, the original markdown, or the raw HTML">
+				display
+			</label>
+
+			<a-bind
+				model="a-markdown#demo-elem"
+				property="display">
+				<select id="demo-display">
+					<option>converted</option>
+					<option>markdown</option>
+					<option>html</option>
+				</select>
+			</a-bind>-->
+		</div>
+
+		<div class="flex column gap0">
+		<!-- flavor -->
+			<!-- <label for="showdown-flavor">
+				Showdown Flavor
+			</label title="You can use flavors or presets so that showdown behaves like popular markdown flavors.">
+
+			<a-bind
+				model="a-markdown#demo-elem"
+				property="options.flavor"
+				func="setFlavor">
+
+					<select id="showdown-flavor">
+						<option value="">Select...</option>
+						<option value="original">
+							original (Original Markdown Spec)
+						</option>
+						<option value="vanilla">
+							vanilla (Showdown default options)
+						</option>
+						<option value="github">
+							github (GFM GitHub Flavored Markdown)
+						</option>
+					</select>
+				</a-bind> -->
+		</div>
+
+		<div class="card flex space-between">
+		<!-- omitExtraWLInCodeBlocks -->
+			<!-- <check-box
+				input-id="omitExtraWLInCodeBlocks"
+				label="omitExtraWLInCodeBlocks"
+				value="true"
+				bind="a-markdown#option-omitExtraWLInCodeBlocks:options.omitExtraWLInCodeBlocks"
+				tooltip="(boolean) [default false] Omit the trailing newline in a code block.">
+			</check-box>
+
+			<a-markdown dedent id="option-omitExtraWLInCodeBlocks">
+				normal text
+
+						// code block
+						var foo = 'bar';
+						console.log(foo);
+
+				normal text
+			</a-markdown> -->
+		</div>
+
+		<div class="card flex space-between">
+		<!-- ghCodeBlocks -->
+			<!-- <check-box
+				input-id="ghCodeBlocks"
+				label="ghCodeBlocks"
+				value="true"
+				bind="a-markdown#option-ghCodeBlocks:options.ghCodeBlocks"
+				tooltip="(boolean) [default true] Enable support for GFM code block style.">
+			</check-box>
+
+			<a-markdown
+				debug
+				id="option-ghCodeBlocks"
+				display="converted">
+				normal text
+
+						// code block
+						var foo = 'bar';
+						console.log(foo);
+
+				normal text
+			</a-markdown>
+		</div> -->
+	</section>
 </body>
 </html>

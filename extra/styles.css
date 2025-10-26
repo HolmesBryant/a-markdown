@@ -419,6 +419,10 @@ body {
 	.stretch
 	{ align-items: stretch; }
 
+	.stretch > * {
+		flex: 1;
+	}
+
 	.space-between
 	{ justify-content: space-between; }
 
