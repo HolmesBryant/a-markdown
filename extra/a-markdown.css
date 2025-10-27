@@ -28,3 +28,10 @@ a-markdown {
 	  --cell-max-width:  360px;
 	}
 }
+
+a-markdown[display="html"],
+a-markdown[display="markdown"] {
+	background-color: var(--bg2-color);
+	font-family: ui-monospace;
+	white-space: pre;
+}

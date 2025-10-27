@@ -23,13 +23,6 @@ Normal Test
 
 ---
 
-```
-<!-- unindented code block -->
-	<div>
-		code block (using ```)
-	</div>
-```
-
 ## A Table
 
 | Heading One | Heading Two | Heading Three |
