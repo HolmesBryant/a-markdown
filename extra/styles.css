@@ -109,8 +109,6 @@ body {
 
   article,
   button,
-  code,
-  pre,
   details,
   input,
   section,
@@ -119,6 +117,10 @@ body {
   textarea,
   .card
   { border-radius: var(--border-radius) }
+
+  pre,
+  code
+  { border-radius: 5px; }
 
   .nofrills {
   	border: none;
@@ -207,6 +209,10 @@ body {
 	code
 	{ padding: 0.2rem 0.4rem; }
 
+	details[opem] {
+		padding: 0 var(--pad) 0 var(--pad);
+	}
+
 	details#readme
 	{ overflow: auto; }
 
@@ -274,6 +280,7 @@ body {
 		padding: var(--pad);
 		min-height: var(--min);
 	  overflow-x: auto;
+	  white-space: pre-line;
 	}
 
 	section {

@@ -125,6 +125,8 @@ export default class CheckBox extends HTMLElement {
 		</style>
 
 		<div id="wrapper" class="flex column start gap2">
+
+			<!-- checkbox / label / tooltip -->
 			<div class="flex wrap" style="width:100%;">
 				${bind ? bind : ''}
 	        <input
@@ -134,6 +136,7 @@ export default class CheckBox extends HTMLElement {
 	          value="${this.value}">
 	      ${bind ? bindEnd : ''}
 
+				<!-- label / tooltip -->
 				<div class="flex flex1 space-between">
 	        <label
 	            for="${this.inputId}"
@@ -148,6 +151,7 @@ export default class CheckBox extends HTMLElement {
 	    	</div>
 			</div><!-- /flex -->
 
+			<!-- display dropdown -->
 			<div class="flex">
 				<label for="display">Display:</label>
 				<a-bind
@@ -158,8 +162,8 @@ export default class CheckBox extends HTMLElement {
 						<option>markdown</option>
 						<option value="html">raw html</option>
 					</select>
-					</a-bind>
-				</div>
+				</a-bind>
+			</div>
 		</div><!-- /wrapper -->
 	`;
 

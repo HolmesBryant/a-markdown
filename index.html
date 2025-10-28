@@ -5,6 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>a-markdown Web Component</title>
 	<script type="module" src="extra/a-bind.min.js"></script>
+	<script type="module" src="extra/a-code.min.js"></script>
 	<script type="module" src="extra/check-box.js"></script>
 	<script type="module" src="src/a-markdown.js"></script>
 	<script type="module" src="extra/a-tabset.min.js"></script>
@@ -30,57 +31,66 @@
 	<header>
 		<h1>a-markdown Web Component</h1>
 		<p> A component that leverages the powerful <a href="https://github.com/showdownjs/showdown" target="_blank">Showdown</a> library to render markdown formatted text as HTML </p>
-		<details id="readme">
+		<details open id="readme">
 			<summary>README</summary>
 			<a-markdown file="README.md"></a-markdown>
 		</details>
 	</header>
 
-	<a-tabset>
+	<a-tabset active="2">
 		<strong slot="title">Attributes</strong>
 		<section slot="content">
-			<strong>Attributes</strong>
-
-				<pre style="white-space:collapse">
-					&lt;a-markdown attribute="value" &gt;
-					...
-					&lt;/a-markdown&gt;
-				</pre>
+			<heading>
+				<h2>Attributes</h2>
 			</heading>
 
-			<div class="flex start">
-				<div id="attributes">
-					<div class="flex column">
-						<label for="attr-dedent">dedent</label>
-						<a-bind
-							model="markdown#sample"
-							property="dedent">
-							<input id="attr-dedent" type="checkbox" value="true">
-						</a-bind>
-					</div>
+			<div id="attr-settings" class="flex column stretch">
 
-					<div class="flex column">
-						<label for="attr-display">display</label>
-						<a-bind
-							model="markdown#sample"
-							property="display">
-							<select id="attr-display">
-								<option>converted</option>
-								<option>html</option>
-								<option>markdown</option>
-							</select>
-						</a-bind>
-					</div>
-				</div><!-- /attributes -->
+				<div class="flex space-between">
+				<!-- sanitize -->
+					<check-box
+						input-id="sanitize"
+						label="sanitize"
+						value="true"
+						bind="a-markdown#attr-sanitize:sanitize"
+						tooltip="(boolean) [default false] >Whether to sanitize the converted HTML using DOMPurify.">
+					</check-box>
 
-				<a-markdown id="sample" file="sample.md"></a-markdown>
-			</div>
+					<a-markdown id="attr-sanitize" display="markdown">
+						A malicious script!
+						<script> function doSomethingEvil() {/*...*/}</script>
+					</a-markdown>
+				</div>
+
+				<div class="flex space-between">
+				<!-- file -->
+					<label for="attr-file">file</label>
+
+					<a-bind
+						model="a-markdown#attr-file"
+						property="file">
+						<select id="attr-file">
+							<option value="extra/example-one.md">Example One</option>
+							<option value="extra/example-two.md">Example Two</option>
+						</select>
+					</a-bind>
+
+					<a-tooltip position="modal">
+						<b slot="title">file</b>
+						<p>The URL of the markdown file to fetch.</p>
+					</a-tooltip>
+
+					<a-markdown id="attr-file" file="extra/example-one.md">
+						foo
+					</a-markdown>
+				</div>
+			</div><!-- /attr-settings -->
 		</section>
 
 		<strong slot="title">Showdown Options</strong>
 		<section slot="content">
 			<heading>
-				<strong>Options</strong>
+				<h2>Options</h2>
 
 				<pre style="white-space:collapse">
 					&lt;a-markdown options='{"property": "value"}'&gt;
@@ -99,12 +109,22 @@
 					tooltip="(boolean) [default false] Enable support for tables syntax.">
 				</check-box>
 
-				<a-markdown id="option-tables">
-					| Heading One | Heading Two | Heading Three |
-					| :---------- | :---------: | ------------: |
-					| Cell A 1    | Cell A 2    | Cell A 3      |
-					| Cell B 1    | Cell B 2    | Cell B 3      |
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-tables">
+						| Heading One | Heading Two | Heading Three |
+						| :---------- | :---------: | ------------: |
+						| Cell A 1    | Cell A 2    | Cell A 3      |
+						| Cell B 1    | Cell B 2    | Cell B 3      |
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"tables": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -115,16 +135,27 @@
 					value="true"
 					bind="a-markdown#option-tablesHeaderId:tablesHeaderId"
 					tooltip="(boolean) [default false] If enabled adds an id property to table headers tags.">
+
 				</check-box>
 
-				<a-markdown
-					id="option-tablesHeaderId"
-					display="html">
-					| Heading A |
-					| :-------- |
-					| 100    		|
-					| *foo*  		|
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown
+						id="option-tablesHeaderId"
+						display="html">
+						| Heading A |
+						| :-------- |
+						| 100    		|
+						| *foo*  		|
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"tablesHeaderId": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -137,9 +168,18 @@
 					tooltip='(boolean) [default true] Replaces three dots with the ellipsis unicode character.'>
 				</check-box>
 
-				<a-markdown id="option-ellipsis" display="html" style="letter-spacing:.5rem">
-					...
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-ellipsis" display="html" style="letter-spacing:.5rem">
+						...
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown options='{"ellipsis": false}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -150,11 +190,22 @@
 					value="true"
 					bind="a-markdown#option-strikethrough:strikethrough"
 					tooltip="(boolean) [default false] Enable support for strikethrough syntax. ~~strikethrough~~ as <del>strikethrough</del>">
+
 				</check-box>
 
-				<a-markdown id="option-strikethrough">
-					~~Some strikethrough text~~
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-strikethrough">
+						~~Some strikethrough text~~
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"strikethrough": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -165,13 +216,24 @@
 					value="true"
 					bind="a-markdown#option-simpleLineBreaks:simpleLineBreaks"
 					tooltip="(boolean) [default false] Parses single line breaks as &lt; br &gt;, like GitHub does, without needing a blank line between lines of text.">
+
 				</check-box>
 
-				<a-markdown id="option-simpleLineBreaks">
-					line one.
-					line two.
-					line three.
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-simpleLineBreaks">
+						line one.
+						line two.
+						line three.
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"simpleLineBreaks": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -182,32 +244,26 @@
 					value="true"
 					bind="a-markdown#option-noHeaderId:noHeaderId"
 					tooltip="(boolean) [default false] Disable the automatic generation of header ids. Setting to true overrides prefixHeaderId">
+
 				</check-box>
 
-				<a-markdown
-					id="option-noHeaderId"
-					display="html">
-					# Header One
-					# Header Two
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown
+						id="option-noHeaderId"
+						display="html">
+						# Header One
+						# Header Two
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"noHeaderId": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
-
-			<!-- <div class="card flex space-between">
-			customizedHeaderId
-				<check-box
-					input-id="customizedHeaderId"
-					label="customizedHeaderId"
-					value="true"
-					bind="a-markdown#option-customizedHeaderId:customizedHeaderId"
-					tooltip="(boolean) [default false] Use text in curly braces as header id.">
-				</check-box>
-
-				<a-markdown
-					id="option-customizedHeaderId"
-					display="html">
-					# header {custom-header}
-				</a-markdown>
-			</div> -->
 
 			<div class="card flex space-between">
 			<!-- ghCompatibleHeaderId -->
@@ -217,13 +273,24 @@
 					value="true"
 					bind="a-markdown#option-ghCompatibleHeaderId:ghCompatibleHeaderId"
 					tooltip="(boolean) [default false] Generate header ids compatible with github style (spaces are replaced with dashes and a bunch of non alphanumeric chars are removed)">
+
 				</check-box>
 
-				<a-markdown
-					id="option-ghCompatibleHeaderId"
-					display="html">
-					# Header One!
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown
+						id="option-ghCompatibleHeaderId"
+						display="html">
+						# Header One!
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"ghCompatibleHeaderId": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -234,13 +301,24 @@
 					value="true"
 					bind="a-markdown#option-prefixHeaderId:prefixHeaderId"
 					tooltip="(string/boolean) [default false] Add a prefix to the generated header ids. Passing a string will prefix that string to the header id. Setting to true will add a generic 'section' prefix.">
+
 				</check-box>
 
-				<a-markdown
-					id="option-prefixHeaderId"
-					display="html">
-					# header One
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown
+						id="option-prefixHeaderId"
+						display="html">
+						# header One
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"prefixHeaderId": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -251,15 +329,24 @@
 					value="true"
 					bind="a-markdown#option-parseImgDimensions:parseImgDimensions"
 					tooltip="(boolean) [default false] Enable support for setting image dimensions from within markdown syntax. <strong>NOTE: This Showdown setting does not appear to do anything!</strong>">
+
 				</check-box>
 
-				<div class="flex column gap0">
+				<div class="flex column">
 					<a-markdown
 						id="option-parseImgDimensions"
 						display="markdown">
 						![iguana](extra/iguana.png =200x80)
 						![iguana](extra/iguana.png =100x*)
 					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"parseImgDimensions": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
 				</div>
 			</div>
 
@@ -271,12 +358,23 @@
 					value="true"
 					bind="a-markdown#option-tasklists:tasklists"
 					tooltip="(boolean) [default false] Enable support for GFM tasklists.">
+
 				</check-box>
 
-				<a-markdown id="option-tasklists">
-					- [] Task One
-					- [x] Task Two
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-tasklists">
+						- [] Task One
+						- [x] Task Two
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"tasklists": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -287,10 +385,21 @@
 					value="true"
 					bind="a-markdown#option-encodeEmails:encodeEmails"
 					tooltip="(boolean) [default true] Enable e-mail addresses encoding through the use of Character Entities, transforming ASCII e-mail addresses into its equivalent decimal entities.">
+
 				</check-box>
 
-				<a-markdown id="option-encodeEmails" file="extra/encode-email.md" display="html">
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-encodeEmails" file="extra/encode-email.md" display="html">
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"encodeEmails": false}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -301,11 +410,22 @@
 					bind="a-markdown#option-emoji:emoji"
 					value="true"
 					tooltip='(boolean) [default false] Enable emoji support. Ex: this is a :smile: emoji For more info on available emojis, see https://github.com/showdownjs/showdown/wiki/Emojis'>
+
 				</check-box>
 
-				<a-markdown id="option-emoji">
-					:smile:
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-emoji">
+						:smile:
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"emoji": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -316,10 +436,21 @@
 					value="true"
 					bind="a-markdown#option-splitAdjacentBlockquotes:splitAdjacentBlockquotes"
 					tooltip='(boolean) [default false] Split adjacent blockquote blocks.'>
+
 				</check-box>
 
-				<a-markdown id="option-splitAdjacentBlockquotes" file="extra/blockquotes.md" display="html">
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown id="option-splitAdjacentBlockquotes" file="extra/blockquotes.md" display="html">
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"splitAdjacentBlockquotes": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -330,13 +461,24 @@
 					value="true"
 					bind="a-markdown#option-backslashEscapesHTMLTags:backslashEscapesHTMLTags"
 					tooltip='(boolean) [default false] Support for HTML Tag escaping. ex: \<div>foo\</div>'>
+
 				</check-box>
 
-				<a-markdown
-					id="option-backslashEscapesHTMLTags"
-					file="extra/backslashEscapesHTMLTags.md"
-					display="html">
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown
+						id="option-backslashEscapesHTMLTags"
+						file="extra/backslashEscapesHTMLTags.md"
+						display="html">
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								options='{"backslashEscapesHTMLTags": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -347,13 +489,23 @@
 					value="true"
 					bind="a-markdown#option-openLinksInNewWindow:openLinksInNewWindow"
 					tooltip='(boolean) [default false] Open all links in new windows (by adding the attribute target="_blank"'>
+
 				</check-box>
 
-				<a-markdown
-					id="option-openLinksInNewWindow"
-					display="html">
-					[Link Text](https://developer.mozilla.org/)
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown
+						id="option-openLinksInNewWindow"
+						display="html">
+						[Link Text](https://developer.mozilla.org/)
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown options='{"openLinksInNewWindow": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 
 			<div class="card flex space-between">
@@ -364,69 +516,25 @@
 					value="true"
 					bind="a-markdown#option-ghMentions:ghMentions"
 					tooltip="(boolean) [default false] Enables github @mentions, which link to the username mentioned">
+
 				</check-box>
 
-				<a-markdown
-					id="option-ghMentions">
-					pinging @foo
-				</a-markdown>
+				<div class="flex column">
+					<a-markdown
+						id="option-ghMentions">
+						pinging @foo
+					</a-markdown>
+
+					<a-code highlight>
+						<textarea>
+							<a-markdown options='{"ghMentions": true}'>
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
 			</div>
 		</section>
 	</a-tabset>
-
-
-	<section id="demo">
-	<h2>Demo</h2>
-
-		<div class="flex top">
-			<div id="options" class="flex360">
-
-
-
-
-			<!-- <a-markdown
-				nocache
-				id="demo-elem"
-				class="card flex360"
-				file="extra/example-one.md">
-			</a-markdown> -->
-
-		</div>
-	</section>
-
-
-	<section id="demo-old">
-		<div class="card">
-			<h3>Rendered Result</h3>
-
-			<!-- <a-markdown file="sample.md" options='{"foo":"bar"}'></a-markdown> -->
-		</div>
-
-		<p> </p>
-
-		<div class="flex stretch space-around">
-			<div class="card flex360">
-				<strong>Markdown</strong>
-
-				<!-- <a-markdown
-					class="pre"
-					file="sample.md"
-					display="markdown">
-				</a-markdown> -->
-			</div>
-
-			<div class="card flex360">
-				<strong>Generated HTML</strong>
-				<!-- <a-markdown
-					class="pre"
-					file="sample.md"
-					display="html">
-				</a-markdown> -->
-			</div>
-		</div>
-
-	</section>
-
 
 	<section>
 	<h2>Quick Start</h2>
@@ -452,24 +560,7 @@
 	<section hidden>
 		<!-- deal with later -->
 
-		<div class="flex column">
-		<!-- display -->
-			<!-- <label
-				for="demo-display"
-				title="Display the rendered results, the original markdown, or the raw HTML">
-				display
-			</label>
 
-			<a-bind
-				model="a-markdown#demo-elem"
-				property="display">
-				<select id="demo-display">
-					<option>converted</option>
-					<option>markdown</option>
-					<option>html</option>
-				</select>
-			</a-bind>-->
-		</div>
 
 		<div class="flex column gap0">
 		<!-- flavor -->
@@ -491,7 +582,7 @@
 							vanilla (Showdown default options)
 						</option>
 						<option value="github">
-							github (GFM GitHub Flavored Markdown)
+							github (GitHub Flavored Markdown)
 						</option>
 					</select>
 				</a-bind> -->

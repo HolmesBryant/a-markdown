@@ -8,7 +8,7 @@
 */
 export default class AMarkdown extends HTMLElement {
 
-  // Attributes (have public getters / setters)
+  // Attributes
 
   /**
    * Logs several variables to the console if true
@@ -101,8 +101,6 @@ export default class AMarkdown extends HTMLElement {
    */
   #showdown;
 
-  // Public
-
   /**
    * The URL to load the DOMPurify library from.
    * @type {string}
@@ -114,20 +112,6 @@ export default class AMarkdown extends HTMLElement {
    * @type {string}
   */
   showdownUrl = 'https://cdn.jsdelivr.net/npm/showdown@2.1.0/+esm';
-
-  // Static
-
-  /**
-   * Holds the Showdown library module. Can be set globally.
-   * @static
-   */
-  static Showdown;
-
-  /**
-   * Holds the DOMPurify library module. Can be set globally.
-   * @static
-   */
-  static DOMPurify;
 
   static observedAttributes = [
     'debug',
@@ -233,150 +217,47 @@ export default class AMarkdown extends HTMLElement {
     return sanitizer.sanitize(html);
   }
 
-  /**
-   * Lazily loads and returns the DOMPurify sanitizer instance.
-   *
-   * 1. Returns the instance-level sanitizer if it has already been loaded.
-   * 2. Uses `AMarkdown.DOMPurify` if it was provided by the user (for NPM-based projects).
-   * 3. Dynamically imports the module, attempting a bare package import ('dompurify') first,
-   *    and falling back to the `dompurifyUrl` (CDN) if that fails.
-   *
-   * Once loaded, it caches the module on the static `AMarkdown.DOMPurify` property to prevent
-   * redundant loads by other instances of the component.
-   *
-   * @private
-   * @async
-   * @returns {Promise<DOMPurify>} A promise that resolves with the loaded DOMPurify module/instance.
-   */
   async #getSanitizer() {
-    // 1. Check if DOMPurify was already loaded and stored
     if (this.#dompurify) return this.#dompurify;
-    // 2. Check if it was set statically by the user
-    if (AMarkdown.DOMPurify) {
-        this.#dompurify = AMarkdown.DOMPurify;
-        return this.#dompurify;
-    }
-    // 3. Load it dynamically (NPM with CDN fallback)
-    const mods = await this.#loadModule('dompurify', this.dompurifyUrl);
+    const mods = await import(this.dompurifyUrl);
     this.#dompurify = mods.default;
-    // Also store it statically for other instances to use
-    AMarkdown.DOMPurify = this.#dompurify;
     return this.#dompurify;
   }
 
-  /**
-   * Dynamically loads a module, trying a package name first (for NPM)
-   * and falling back to a URL (for CDN).
-   * @private
-   * @param {string} pkgName - The npm package name.
-   * @param {string} url - The CDN URL to fall back to.
-   * @returns {Promise<object>} The loaded module.
-   */
-  async #loadModule(pkgName, url) {
-    try {
-      // First, try to import using the package name. Bundlers will resolve this.
-      return await import(pkgName);
-    } catch (error) {
-      // console.warn(`Could not load module '${pkgName}'. Falling back to CDN: ${url}`);
-      // If that fails, import from the CDN URL.
-      return await import(url);
-    }
-  }
-
-  /**
-   * Asynchronously loads all necessary assets for the component.
-   *
-   * Checks if a `Showdown` module has been provided (`AMarkdown.Showdown`).
-   * If not, it proceeds to load it dynamically, attempting an NPM import before falling back to the CDN URL.
-   *
-   * If the `sanitize` property is true, it calls the `#getSanitizer()` method to ensure DOMPurify is loaded.
-   *
-   * Fetches the markdown source. If the `file` attribute is present, it fetches from that URL.
-   * Otherwise, it creates a Blob from the element's `textContent` and fetches from the resulting object URL.
-   *
-   * @private
-   * @async
-   * @returns {Promise<void>} A promise that resolves when all assets have been fetched and processed.
-   * @throws {Error} Throws an error if the Showdown library fails to load, as it is a critical dependency.
-   */
   async #setAssets() {
-    let file;
+    let file, showdown, dompurify;
     const promises = [];
+    showdown = await import(this.showdownUrl);
+    promises.push(showdown);
 
-    // --- Load Showdown ---
-    // Check if it was set statically first
-    if (AMarkdown.Showdown) {
-      this.#showdown = AMarkdown.Showdown;
-    } else {
-      // Otherwise, load it dynamically (NPM -> CDN)
-      const showdownModule = this.#loadModule('showdown', this.showdownUrl).then(mods => {
-        this.#showdown = mods.default;
-        AMarkdown.Showdown = this.#showdown; // Cache for other instances
-      });
-      promises.push(showdownModule);
-    }
-
-
-    // --- Load DOMPurify (if needed) ---
-    if (this.#sanitize) {
-        // The getSanitizer method now handles the loading logic
-        const dompurifyModule = this.#getSanitizer();
-        promises.push(dompurifyModule);
-    }
-
-
-    // --- Fetch Markdown Content ---
-    if (this.hasAttribute('file')) {
-      file = fetch(this.#file);
+    if (this.file) {
+      file = await fetch(this.#file);
       promises.push(file);
     } else if (this.textContent.trim().length > 0) {
       const blob = new Blob([this.textContent], { type: 'text/markdown' });
-      file = fetch(URL.createObjectURL(blob));
+      file = await fetch(URL.createObjectURL(blob));
+      this.#file = file;
     }
 
+    if (this.#sanitize) {
+      dompurify = await import(this.dompurifyUrl);
+      promises.push(dompurify);
+    }
 
-    // --- Await all concurrent tasks ---
     const results = await Promise.allSettled(promises);
     for (const result of results) {
       if (result.status === 'rejected') {
-        // More specific error logging
-        console.error(`Failed to load a required asset.`, result.reason);
+        console.error(`Failed to fetch: ${result.value.url}`)
       }
     }
 
-    if (file) {
-        const markdown = await (await file).text();
-        this.#markdown = this.#dedent ? this.#doDedent(markdown) : markdown;
-    } else {
-        this.#markdown = ''; // Ensure markdown is not undefined
-    }
-
-
-    if (this.debug) console.log(this.#markdown);
-
-    if (!this.#showdown) {
-        throw new Error('Showdown library could not be loaded.');
-    }
+    const markdown = await file.text();
+    this.markdown = this.#dedent ? this.#doDedent(markdown) : markdown;
+    if (this.debug) console.log(markdown);
+    this.#showdown = showdown.default;
+    if (dompurify) this.#dompurify = dompurify.default;
   }
 
-  /**
-   * Initializes the component by loading assets, setting up the converter, and rendering the content.
-   *
-   * Calls `#setAssets()` and awaits the loading of all required resources,
-   * including the Showdown library, DOMPurify (if needed), and the markdown content.
-   *
-   * Once assets are available, it instantiates the Showdown converter using the
-   * options provided in the `#options` property.
-   *
-   * Triggers the initial `#render()` call to convert the markdown and display it in the DOM.
-   *
-   * (Optional) It reflects the final resolved Showdown options back onto the
-   * element as properties, which can be useful for introspection or data-binding.
-   *
-   * @private
-   * @async
-   * @returns {Promise<void>} A promise that resolves when the entire initialization and first render are complete.
-   */
   async #init() {
     await this.#setAssets();
     this.#converter = new this.#showdown.Converter(this.#options);
@@ -389,18 +270,6 @@ export default class AMarkdown extends HTMLElement {
     }
   }
 
-  /**
-   * Converts markdown and updates the element's content.
-   *
-   * Transforms the internal markdown string to HTML using the Showdown converter.
-   * It then populates the element's DOM based on the current `display` mode
-   * ('converted', 'markdown', or 'html').
-   *
-   * @private
-   * @async
-   * @returns {Promise<void>} Resolves when rendering is complete.
-   * @throws {Error} If Showdown converter is not initialized.
-   */
   async #render() {
     if (!this.#showdown) throw new Error('Showdown library not found!');
     if (!this.#converter) throw new Error('Showdown converter not initialized!');
@@ -441,11 +310,7 @@ export default class AMarkdown extends HTMLElement {
   }
 
   get file() { return this.#file }
-  set file(value) {
-    this.setAttribute('file', value);
-    if (window.abind) abind.update(this, 'file', value);
-    this.#init();
-  }
+  set file(value) { this.setAttribute('file', value) }
 
   get html() { return this.#html }
   set html(value) {
