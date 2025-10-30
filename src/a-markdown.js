@@ -1,11 +1,9 @@
 /**
- * @class AMarkdown
- * @extends HTMLElement
- * @author Holmes Bryant https://github.com/HolmesBryant
- * @license MIT
+ * @file A flexible web component that renders Markdown text as HTML.
+ * @author Holmes Bryant <https://github.com/HolmesBryant>
  * @version 1.0.0
- * @summary A custom HTML element that fetches, converts and displays a Markdown file or inline Markdown content as HTML.
-*/
+ * @license MIT
+ */
 export default class AMarkdown extends HTMLElement {
 
   // Attributes (have public getters / setters)
@@ -18,18 +16,18 @@ export default class AMarkdown extends HTMLElement {
   debug = false;
 
   /**
-   *How to display the content. Can be 'converted', 'markdown', or 'html'.
-   *@private
-   *@type {string}
-   *@default 'converted'
-  */
+   * How to display the content. Can be 'converted', 'markdown', or 'html'.
+   * @private
+   * @type {string}
+   * @default 'converted'
+   */
   #display = 'converted';
 
   /**
    * The URL of the markdown file to fetch.
    * @private
    * @type {string | undefined}
-  */
+   */
   #file;
 
   /**
@@ -38,46 +36,53 @@ export default class AMarkdown extends HTMLElement {
    * @type {object}
    * @default {tables: true}
    * @see https://github.com/showdownjs/showdown#options
-  */
-  #options = {tables: true};
+   */
+  #options = {
+    tables: true,
+    ellipsis: true,
+    ghCodeBlocks: true,
+    parseImgDimensions: true,
+    encodeEmails: true
+  };
 
   /**
    * Whether to sanitize the converted HTML using DOMPurify.
    * @private
    * @type {boolean}
    * @default false
-  */
+   */
   #sanitize = false;
 
-  // Private
-
-  /**
-   * Abort controller for fetch requests.
-   * @private
-   * @type {AbortController | undefined}
-  */
-  #abortController;
+  ////// Private Properties //////
 
   /**
    * The Showdown converter instance.
    * @private
    * @type {object | undefined}
-  */
+   */
   #converter;
 
   /**
+   * The timer ID for the debounce render
+   * @private
+   * @type {number | null}
+   */
+  #debounceTimer = null;
+
+  /**
    * Whether to remove leading whitespace from the markdown content.
+   * When processing inline Markdown, this is set to true
    * @private
    * @type {boolean}
    * @default true
-  */
-  #dedent = true;
+   */
+  #dedent = false;
 
   /**
    * The DOMPurify instance.
    * @private
    * @type {DOMPurify}
-  */
+   */
   #dompurify;
 
   /**
@@ -91,7 +96,7 @@ export default class AMarkdown extends HTMLElement {
    * The fetched markdown content.
    * @private
    * @type {string | undefined}
-  */
+   */
   #markdown;
 
   /**
@@ -101,21 +106,28 @@ export default class AMarkdown extends HTMLElement {
    */
   #showdown;
 
-  // Public
+  /**
+   * Flag to indicate if the component has finished its initial asynchronous setup.
+   * @private
+   * @type {boolean}
+   */
+  #isReady = false;
+
+  ////// Public Properties //////
 
   /**
    * The URL to load the DOMPurify library from.
    * @type {string}
-  */
+   */
   dompurifyUrl = 'https://cdn.jsdelivr.net/npm/dompurify@3.3.0/+esm';
 
   /**
    * The URL to load the Showdown library from.
    * @type {string}
-  */
+   */
   showdownUrl = 'https://cdn.jsdelivr.net/npm/showdown@2.1.0/+esm';
 
-  // Static
+  ////// Static Properties //////
 
   /**
    * Holds the Showdown library module. Can be set globally.
@@ -134,59 +146,125 @@ export default class AMarkdown extends HTMLElement {
     'display',
     'file',
     'options',
-    'sanitize'
+    'sanitize',
+    'backslashEscapesHTMLTags',
+    'completeHTMLDocument',
+    'disableForced4SpacesIndentedSublists',
+    'ellipsis',
+    'emoji',
+    'encodeEmails',
+    'excludeTrailingPunctuationFromURLs',
+    'ghCodeBlocks',
+    'ghCompatibleHeaderId',
+    'ghMentions',
+    'ghMentionsLink',
+    'headerLevelStart',
+    'literalMidWordAsterisks',
+    'literalMidWordUnderscores',
+    'metadata',
+    'noHeaderId',
+    'omitExtraWLInCodeBlocks',
+    'openLinksInNewWindow',
+    'parseImgDimensions',
+    'prefixHeaderId',
+    'rawPrefixHeaderId',
+    'rawHeaderId',
+    'requireSpaceBeforeHeadingText',
+    'simpleLineBreaks',
+    'simplifiedAutoLink',
+    'smartIndentationFix',
+    'smoothLivePreview',
+    'splitAdjacentBlockquotes',
+    'strikethrough',
+    'tables',
+    'tablesHeaderId',
+    'tasklists',
+    'underline',
   ]
-
 
   constructor() {
     super();
   }
 
-  // Lifecycle
+  // Lifecycle Methods
 
   attributeChangedCallback(attr, oldval, newval) {
-    const bin = newval !== false && newval !== 'false';
     if (oldval === newval) return;
+    const isBoolean = !(attr in {display:1, file:1, options:1, ghMentionsLink:1});
+    const value = isBoolean ? newval !== null && newval !== 'false' : newval;
 
-    switch (attr) {
-    case 'debug':
-      this.debug = bin;
-    case 'display':
-      this.#display = newval;
-      break;
-    case 'file':
-      this.#file = newval;
-      break;
-    case 'options':
-      try {
-        this.#options = JSON.parse(newval);
-      } catch (error) {
-        console.error('Error: Failed to parse options. Make sure it is a valid JSON formatted string.');
+    if (isBoolean) {
+      // For Showdown options, use the centralized setter
+      this.#setOption(attr, value);
+    } else {
+      // Handle the component's own attributes
+      switch (attr) {
+        case 'debug':
+          this.debug = value;
+          break;
+        case 'display':
+          this.#display = value;
+          break;
+        case 'file':
+          this.#file = value;
+          break;
+        case 'options':
+          try {
+            // Merge new options with existing ones
+            const newOptions = JSON.parse(newval);
+            this.#options = { ...this.#options, ...newOptions };
+            if (this.#isReady) this.#init(); // Re-initialize if ready
+          } catch (error) {
+            console.error('Error: Failed to parse options.', error);
+          }
+          break;
+        case 'sanitize':
+          this.#sanitize = value;
+          this.#getSanitizer();
+          break;
       }
-      break;
-    case 'sanitize':
-      this.#sanitize = bin;
-      this.#getSanitizer();
-      break;
     }
   }
 
   connectedCallback() {
-    this.#abortController = new AbortController();
     this.#init();
   }
 
   disconnectedCallback() {
-    this.#abortController.abort();
+    clearTimeout(this.#debounceTimer);
     this.#converter = null;
     this.#showdown = null;
     this.#dompurify = null;
     if (this.#file instanceof URL) {
       URL.revokeObjectURL(this.#file);
     }
+    this.#file = null;
   }
 
-  // Private
+  // Private Methods
+
+  /**
+   * Updates the internal options object immediately.
+   * If the component is ready, it also updates the live converter and re-renders.
+   * @private
+   * @param {string} key The option name.
+   * @param {*} value The option value.
+   */
+  #setOption(key, value) {
+    this.#options[key] = value;
+    if (this.#isReady) {
+      this.#converter.setOption(key, value);
+      this.#debouncedRender();
+    }
+  }
+
+  /**
+   * Helper to normalize boolean values from attributes/properties.
+   * @private
+   */
+  #toBool(value) {
+    return value !== false && value !== 'false';
+  }
 
   /**
    * Converts a string to a blob URL.
@@ -324,22 +402,21 @@ export default class AMarkdown extends HTMLElement {
         promises.push(dompurifyModule);
     }
 
-
     // --- Fetch Markdown Content ---
     if (this.hasAttribute('file')) {
       file = fetch(this.#file);
+      this.#dedent = false;
       promises.push(file);
     } else if (this.textContent.trim().length > 0) {
+      this.#dedent = true;
       const blob = new Blob([this.textContent], { type: 'text/markdown' });
       file = fetch(URL.createObjectURL(blob));
     }
-
 
     // --- Await all concurrent tasks ---
     const results = await Promise.allSettled(promises);
     for (const result of results) {
       if (result.status === 'rejected') {
-        // More specific error logging
         console.error(`Failed to load a required asset.`, result.reason);
       }
     }
@@ -348,11 +425,8 @@ export default class AMarkdown extends HTMLElement {
         const markdown = await (await file).text();
         this.#markdown = this.#dedent ? this.#doDedent(markdown) : markdown;
     } else {
-        this.#markdown = ''; // Ensure markdown is not undefined
+        this.#markdown = '';
     }
-
-
-    if (this.debug) console.log(this.#markdown);
 
     if (!this.#showdown) {
         throw new Error('Showdown library could not be loaded.');
@@ -360,33 +434,27 @@ export default class AMarkdown extends HTMLElement {
   }
 
   /**
-   * Initializes the component by loading assets, setting up the converter, and rendering the content.
-   *
-   * Calls `#setAssets()` and awaits the loading of all required resources,
-   * including the Showdown library, DOMPurify (if needed), and the markdown content.
-   *
-   * Once assets are available, it instantiates the Showdown converter using the
-   * options provided in the `#options` property.
-   *
-   * Triggers the initial `#render()` call to convert the markdown and display it in the DOM.
-   *
-   * (Optional) It reflects the final resolved Showdown options back onto the
-   * element as properties, which can be useful for introspection or data-binding.
-   *
-   * @private
-   * @async
-   * @returns {Promise<void>} A promise that resolves when the entire initialization and first render are complete.
+   * Initializes the component.
+   * Now uses the #options object that may have been populated before init completes.
    */
   async #init() {
     await this.#setAssets();
+    // Use the centrally managed #options object for instantiation
     this.#converter = new this.#showdown.Converter(this.#options);
 
     await this.#render();
-    const options = this.#converter.getOptions();
 
-    for (const option in options) {
-      this[option] = options[option];
-    }
+    // Set the ready flag. Any setters called after this point will trigger a re-render.
+    this.#isReady = true;
+  }
+
+  /**
+   * Debounces the render function to prevent rapid updates.
+   * @private
+   */
+  #debouncedRender() {
+    clearTimeout(this.#debounceTimer);
+    this.#debounceTimer = setTimeout(() => this.#render(), this.renderDebounce);
   }
 
   /**
@@ -436,379 +504,246 @@ export default class AMarkdown extends HTMLElement {
   get display() { return this.#display }
   set display(value) {
     this.setAttribute('display', value);
-    if (window.abind) abind.update(this, 'display', value);
-    this.#render();
+    this.#display = value; // Update internal state
+    if (this.#isReady) this.#debouncedRender(); // Re-render if ready
   }
 
   get file() { return this.#file }
   set file(value) {
     this.setAttribute('file', value);
-    if (window.abind) abind.update(this, 'file', value);
-    this.#init();
+    this.#file = value;
+    this.#init(); // Changing the file requires a full re-initialization
   }
 
   get html() { return this.#html }
   set html(value) {
     this.#html = value;
-    if (window.abind) abind.update(this, 'html', value);
   }
 
   get markdown() { return this.#markdown }
   set markdown(value) {
     this.#markdown = value;
-    if (window.abind) abind.update(this, 'markdown', value);
+    // If the component is ready, render the new markdown.
+    // If not, #init will pick up this new value when it runs.
+    if (this.#isReady) {
+      this.#debouncedRender();
+    }
   }
 
   get options() { return this.#options }
   set options(value) {
-    try {
-      this.setAttribute('options', JSON.stringify(value));
-    } catch (error) {
-      console.error('Failed to decode options', error);
-    }
+    this.setAttribute('options', JSON.stringify(value));
   }
 
   get sanitize() { return this.#sanitize }
   set sanitize(value) {
-    value = value !== false && value !== 'false';
-    this.setAttribute('sanitize', value) ;
-    if (window.abind) abind.update(this, 'sanitize', value);
-    this.#render();
+    const boolValue = this.#toBool(value);
+    this.setAttribute('sanitize', boolValue);
+    this.#sanitize = boolValue;
+    if (this.#isReady) this.#debouncedRender();
   }
 
   /**************************************************************
   * Showdown Options
   *************************************************************/
 
-  get backslashEscapesHTMLTags() { return this.#converter?.getOption('backslashEscapesHTMLTags') }
+  get backslashEscapesHTMLTags() { return this.#options.backslashEscapesHTMLTags }
   set backslashEscapesHTMLTags(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'backslashEscapesHTMLTags', value);
-    if (value === this.#converter.getOption('backslashEscapesHTMLTags')) return;
-    this.#converter.setOption('backslashEscapesHTMLTags', value);
-    this.#render();
+    this.#setOption('backslashEscapesHTMLTags', this.#toBool(value));
   }
 
-  get completeHTMLDocument() { return this.#converter?.getOption('completeHTMLDocument') }
+  get completeHTMLDocument() { return this.#options.completeHTMLDocument }
   set completeHTMLDocument(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'completeHTMLDocument', value);
-    if (value === this.#converter.getOption('completeHTMLDocument')) return;
-    this.#converter.setOption('completeHTMLDocument', value);
-    this.#render();
+    this.#setOption('completeHTMLDocument', this.#toBool(value));
   }
 
-  get disableForced4SpacesIndentedSublists() { return this.#converter?.getOption('disableForced4SpacesIndentedSublists') }
+  get disableForced4SpacesIndentedSublists() { return this.#options.XXX }
   set disableForced4SpacesIndentedSublists(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'disableForced4SpacesIndentedSublists', value);
-    if (value === this.#converter.getOption('disableForced4SpacesIndentedSublists')) return;
-    this.#converter.setOption('disableForced4SpacesIndentedSublists', value);
-    this.#render();
+    this.#setOption('disableForced4SpacesIndentedSublists', this.#toBool(value));
   }
 
-  get ellipsis() { return this.#converter?.getOption('ellipsis'); }
+  get ellipsis() { return this.#options.ellipsis }
   set ellipsis(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'ellipsis', value);
-    if (value === this.#converter.getOption('ellipsis')) return;
-    this.#converter.setOption('ellipsis', value);
-    this.#render();
+    this.#setOption('ellipsis', this.#toBool(value));
   }
 
-  get emoji() { return this.#converter?.getOption('emoji') }
+  get emoji() { return this.#options.emoji }
   set emoji(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'emoji', value);
-    if (value === this.#converter.getOption('emoji')) return;
-    this.#converter.setOption('emoji', value);
-    this.#render();
+    this.#setOption('emoji', this.#toBool(value));
   }
 
-  get encodeEmails() { return this.#converter?.getOption('encodeEmails') }
+  get encodeEmails() { return this.#options.encodeEmails }
   set encodeEmails(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'encodeEmails', value);
-    if (value === this.#converter.getOption('encodeEmails')) return;
-    this.#converter.setOption('encodeEmails', value);
-    this.#render();
+    this.#setOption('encodeEmails', this.#toBool(value));
   }
 
-  get excludeTrailingPunctuationFromURLs() { return this.#converter?.getOption('excludeTrailingPunctuationFromURLs') }
+  get excludeTrailingPunctuationFromURLs() { return this.#options.excludeTrailingPunctuationFromURLs }
   set excludeTrailingPunctuationFromURLs(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'excludeTrailingPunctuationFromURLs', value);
-    if (value === this.#converter.getOption('excludeTrailingPunctuationFromURLs')) return;
-    this.#converter.setOption('excludeTrailingPunctuationFromURLs', value);
-    this.#render();
+    this.#setOption('excludeTrailingPunctuationFromURLs', this.#toBool(value));
   }
 
-  get ghCodeBlocks() { return this.#converter?.getOption('ghCodeBlocks') }
+  get ghCodeBlocks() { return this.#options.ghCodeBlocks }
   set ghCodeBlocks(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'ghCodeBlocks', value);
-    if (value === this.#converter.getOption('ghCodeBlocks')) return;
-    this.#converter.setOption('ghCodeBlocks', value);
-    this.#render();
+    this.#setOption('ghCodeBlocks', this.#toBool(value));
   }
 
-  get ghCompatibleHeaderId() { return this.#converter?.getOption('ghCompatibleHeaderId') }
+  get ghCompatibleHeaderId() { return this.#options.ghCompatibleHeaderId }
   set ghCompatibleHeaderId(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'ghCompatibleHeaderId', value);
-    if (value === this.#converter.getOption('ghCompatibleHeaderId')) return;
-    this.#converter.setOption('ghCompatibleHeaderId', value);
-    this.#render();
+    this.#setOption('ghCompatibleHeaderId', this.#toBool(value));
   }
 
-  get ghMentions() { return this.#converter?.getOption('ghMentions') }
+  get ghMentions() { return this.#options.ghMentions }
   set ghMentions(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'ghMentions', value);
-    if (value === this.#converter.getOption('ghMentions')) return;
-    this.#converter.setOption('ghMentions', value);
-    this.#render();
+    this.#setOption('ghMentions', this.#toBool(value));
   }
 
-  get ghMentionsLink() { return this.#converter?.getOption('ghMentionsLink') }
+  get ghMentionsLink() { return this.#options.ghMentionsLink }
   set ghMentionsLink(value) {
-    if (!this.#converter) return;
     if (window.abind) abind.update(this, 'ghMentionsLink', value);
-    if (value === this.#converter.getOption('ghMentionsLink')) return;
-    this.#converter.setOption('ghMentionsLink', value);
-    this.#render();
+    this.#setOption('ghMentionsLink', this.#toBool(value));
   }
 
-  get headerLevelStart() { return this.#converter?.getOption('headerLevelStart') }
+  get headerLevelStart() { return this.#options.headerLevelStart }
   set headerLevelStart(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'headerLevelStart', value);
-    if (value === this.#converter.getOption('headerLevelStart')) return;
-    this.#converter.setOption('headerLevelStart', value);
-    this.#render();
+    this.#setOption('headerLevelStart', this.#toBool(value));
   }
 
-  get literalMidWordAsterisks() { return this.#converter?.getOption('literalMidWordAsterisks') }
+  get literalMidWordAsterisks() { return this.#options.literalMidWordAsterisks }
   set literalMidWordAsterisks(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'literalMidWordAsterisks', value);
-    if (value === this.#converter.getOption('literalMidWordAsterisks')) return;
-    this.#converter.setOption('literalMidWordAsterisks', value);
-    this.#render();
+    this.#setOption('literalMidWordAsterisks', this.#toBool(value));
   }
 
-  get literalMidWordUnderscores() { return this.#converter?.getOption('literalMidWordUnderscores') }
+  get literalMidWordUnderscores() { return this.#options.literalMidWordUnderscores }
   set literalMidWordUnderscores(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'literalMidWordUnderscores', value);
-    if (value === this.#converter.getOption('literalMidWordUnderscores')) return;
-    this.#converter.setOption('literalMidWordUnderscores', value);
-    this.#render();
+    this.#setOption('literalMidWordUnderscores', this.#toBool(value));
   }
 
-  get metadata() { return this.#converter?.getOption('metadata') }
+  get metadata() { return this.#options.metadata }
   set metadata(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'metadata', value);
-    if (value === this.#converter.getOption('metadata')) return;
-    this.#converter.setOption('metadata', value);
-    this.#render();
+    this.#setOption('metadata', this.#toBool(value));
   }
 
-  get noHeaderId() { return this.#converter?.getOption('noHeaderId') }
+  get noHeaderId() { return this.#options.noHeaderId }
   set noHeaderId(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'noHeaderId', value);
-    if (value === this.#converter.getOption('noHeaderId')) return;
-    this.#converter.setOption('noHeaderId', value);
-    this.#render();
+    this.#setOption('noHeaderId', this.#toBool(value));
   }
 
-  get omitExtraWLInCodeBlocks() { return this.#converter?.getOption('omitExtraWLInCodeBlocks') }
+  get omitExtraWLInCodeBlocks() { return this.#options.omitExtraWLInCodeBlocks }
   set omitExtraWLInCodeBlocks(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'omitExtraWLInCodeBlocks', value);
-    if (value === this.#converter.getOption('omitExtraWLInCodeBlocks')) return;
-    this.#converter.setOption('omitExtraWLInCodeBlocks', value);
-    this.#render();
+    this.#setOption('omitExtraWLInCodeBlocks', this.#toBool(value));
   }
 
-  get openLinksInNewWindow() { return this.#converter?.getOption('openLinksInNewWindow') }
+  get openLinksInNewWindow() { return this.#options.openLinksInNewWindow }
   set openLinksInNewWindow(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'openLinksInNewWindow', value);
-    if (value === this.#converter.getOption('openLinksInNewWindow')) return;
-    this.#converter.setOption('openLinksInNewWindow', value);
-    this.#render();
+    this.#setOption('openLinksInNewWindow', this.#toBool(value));
   }
 
-  get parseImgDimensions() { return this.#converter?.getOption('parseImgDimensions') }
+  get parseImgDimensions() { return this.#options.parseImgDimensions }
   set parseImgDimensions(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'parseImgDimensions', value);
-    if (value === this.#converter.getOption('parseImgDimensions')) return;
-    this.#converter.setOption('parseImgDimensions', value);
-    this.#render();
+    this.#setOption('parseImgDimensions', this.#toBool(value));
   }
 
-  get prefixHeaderId() { return this.#converter?.getOption('prefixHeaderId') }
+  get prefixHeaderId() { return this.#options.prefixHeaderId }
   set prefixHeaderId(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'prefixHeaderId', value);
-    if (value === this.#converter.getOption('prefixHeaderId')) return;
-    this.#converter.setOption('prefixHeaderId', value);
-    this.#render();
+    this.#setOption('prefixHeaderId', this.#toBool(value));
   }
 
-  get rawPrefixHeaderId() { return this.#converter?.getOption('rawPrefixHeaderId') }
+  get rawPrefixHeaderId() { return this.#options.rawPrefixHeaderId }
   set rawPrefixHeaderId(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'rawPrefixHeaderId', value);
-    if (value === this.#converter.getOption('rawPrefixHeaderId')) return;
-    this.#converter.setOption('rawPrefixHeaderId', value);
-    this.#render();
+    this.#setOption('rawPrefixHeaderId', this.#toBool(value));
   }
 
-  get rawHeaderId() { return this.#converter?.getOption('rawHeaderId') }
+  get rawHeaderId() { return this.#options.rawHeaderId }
   set rawHeaderId(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'rawHeaderId', value);
-    if (value === this.#converter.getOption('rawHeaderId')) return;
-    this.#converter.setOption('rawHeaderId', value);
-    this.#render();
+    this.#setOption('rawHeaderId', this.#toBool(value));
   }
 
-  get requireSpaceBeforeHeadingText() { return this.#converter?.getOption('requireSpaceBeforeHeadingText') }
+  get requireSpaceBeforeHeadingText() { return this.#options.requireSpaceBeforeHeadingText }
   set requireSpaceBeforeHeadingText(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'requireSpaceBeforeHeadingText', value);
-    if (value === this.#converter.getOption('requireSpaceBeforeHeadingText')) return;
-    this.#converter.setOption('requireSpaceBeforeHeadingText', value);
-    this.#render();
+    this.#setOption('requireSpaceBeforeHeadingText', this.#toBool(value));
   }
 
-  get simpleLineBreaks() { return this.#converter?.getOption('simpleLineBreaks') }
+  get simpleLineBreaks() { return this.#options.simpleLineBreaks }
   set simpleLineBreaks(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'simpleLineBreaks', value);
-    if (value === this.#converter.getOption('simpleLineBreaks')) return;
-    this.#converter.setOption('simpleLineBreaks', value);
-    this.#render();
+    this.#setOption('simpleLineBreaks', this.#toBool(value));
   }
 
-  get simplifiedAutoLink() { return this.#converter?.getOption('simplifiedAutoLink') }
+  get simplifiedAutoLink() { return this.#options.simplifiedAutoLink }
   set simplifiedAutoLink(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'simplifiedAutoLink', value);
-    if (value === this.#converter.getOption('simplifiedAutoLink')) return;
-    this.#converter.setOption('simplifiedAutoLink', value);
-    this.#render();
+    this.#setOption('simplifiedAutoLink', this.#toBool(value));
   }
 
-  get smartIndentationFix() { return this.#converter?.getOption('smartIndentationFix') }
+  get smartIndentationFix() { return this.#options.smartIndentationFix }
   set smartIndentationFix(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'smartIndentationFix', value);
-    if (value === this.#converter.getOption('smartIndentationFix')) return;
-    this.#converter.setOption('smartIndentationFix', value);
-    this.#render();
+    this.#setOption('smartIndentationFix', this.#toBool(value));
   }
 
-  get smoothLivePreview() { return this.#converter?.getOption('smoothLivePreview') }
+  get smoothLivePreview() { return this.#options.smoothLivePreview }
   set smoothLivePreview(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'smoothLivePreview', value);
-    if (value === this.#converter.getOption('smoothLivePreview')) return;
-    this.#converter.setOption('smoothLivePreview', value);
-    this.#render();
+    this.#setOption('smoothLivePreview', this.#toBool(value));
   }
 
-  get strikethrough() { return this.#converter?.getOption('strikethrough') }
-  set strikethrough(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
-    if (window.abind) abind.update(this, 'strikethrough', value);
-    if (value === this.#converter.getOption('strikethrough')) return;
-    this.#converter.setOption('strikethrough', value);
-    this.#render();
-  }
-
-  get tables() { return this.#converter?.getOption('tables') }
-  set tables(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
-    if (window.abind) abind.update(this, 'tables', value);
-    if (value === this.#converter.getOption('tables')) return;
-    this.#converter.setOption('tables', value);
-    this.#render();
-  }
-
-  get tablesHeaderId() { return this.#converter?.getOption('tablesHeaderId') }
-  set tablesHeaderId(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
-    if (window.abind) abind.update(this, 'tablesHeaderId', value);
-    if (value === this.#converter.getOption('tablesHeaderId')) return;
-    this.#converter.setOption('tablesHeaderId', value);
-    this.#render();
-  }
-
-  get tasklists() { return this.#converter?.getOption('tasklists') }
-  set tasklists(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
-    if (window.abind) abind.update(this, 'tasklists', value);
-    if (value === this.#converter.getOption('tasklists')) return;
-    this.#converter.setOption('tasklists', value);
-    this.#render();
-  }
-
-  get underline() { return this.#converter?.getOption('underline') }
-  set underline(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
-    if (window.abind) abind.update(this, 'underline', value);
-    if (value === this.#converter.getOption('underline')) return;
-    this.#converter.setOption('underline', value);
-    this.#render();
-  }
-
-  get splitAdjacentBlockquotes() { return this.#converter?.getOption('splitAdjacentBlockquotes') }
+  get splitAdjacentBlockquotes() { return this.#options.splitAdjacentBlockquotes }
   set splitAdjacentBlockquotes(value) {
-    if (!this.#converter) return;
-    value = value !== false && value !== 'false';
     if (window.abind) abind.update(this, 'splitAdjacentBlockquotes', value);
-    if (value === this.#converter.getOption('splitAdjacentBlockquotes')) return;
-    this.#converter.setOption('splitAdjacentBlockquotes', value);
-    this.#render();
+    this.#setOption('splitAdjacentBlockquotes', this.#toBool(value));
   }
 
+  get strikethrough() { return this.#options.strikethrough }
+  set strikethrough(value) {
+    if (window.abind) abind.update(this, 'strikethrough', value);
+    this.#setOption('strikethrough', this.#toBool(value));
+  }
+
+  get tables() { return this.#options.tables }
+  set tables(value) {
+    if (window.abind) abind.update(this, 'tables', value);
+    this.#setOption('tables', this.#toBool(value));
+  }
+
+  get tablesHeaderId() { return this.#options.tablesHeaderId }
+  set tablesHeaderId(value) {
+    if (window.abind) abind.update(this, 'tablesHeaderId', value);
+    this.#setOption('tablesHeaderId', this.#toBool(value));
+  }
+
+  get tasklists() { return this.#options.tasklists }
+  set tasklists(value) {
+    if (window.abind) abind.update(this, 'tasklists', value);
+    this.#setOption('tasklists', this.#toBool(value));
+  }
+
+  get underline() { return this.#options.underline; }
+  set underline(value) {
+    // The new setter is just a simple one-liner
+    this.#setOption('underline', this.#toBool(value));
+  }
 }
 
 if (!customElements.get('a-markdown')) customElements.define('a-markdown', AMarkdown);

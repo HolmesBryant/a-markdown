@@ -4,7 +4,7 @@
 	--bg3-color: hsl(40, 17.647%, 90%);
 	--bg4-color: hsl(38.182, 15.068%, 85.686%);
 	--accent-color: hsl(26.25, 12.698%, 75.294%);
-	--accent-text: mediumseagreen;
+	--accent-text: dodgerblue;
 	--border-color: hsl(40, 17.647%, 83.333%);
 	--border-radius: .5rem;
 	--text-color: hsl(36, 8.8757%, 33.137%);
@@ -22,7 +22,7 @@
 		--border-color: dimgray;
 		--text-color: snow;
 		--accent-color: hsl(26.25, 12.698%, 60%);
-		--accent-text: orange;
+		--accent-text: dodgerblue;
 	}
 }
 
@@ -72,6 +72,7 @@ body {
   { background: var(--bg2-color) }
 
 	button,
+	.button,
 	.card
 	{ background: var(--bg3-color) }
 
@@ -81,7 +82,8 @@ body {
 	{ background: var(--bg4-color); }
 
 	hr,
-	button.primary
+	button.primary,
+	.button.primary
 	{ background: var(--accent-color); }
 
   button:hover,
@@ -209,7 +211,7 @@ body {
 	code
 	{ padding: 0.2rem 0.4rem; }
 
-	details[opem] {
+	details[open] {
 		padding: 0 var(--pad) 0 var(--pad);
 	}
 
@@ -280,7 +282,6 @@ body {
 		padding: var(--pad);
 		min-height: var(--min);
 	  overflow-x: auto;
-	  white-space: pre-line;
 	}
 
 	section {

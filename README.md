@@ -4,17 +4,17 @@ A standards-based, highly configurable custom HTML element that fetches, convert
 
 ## Features
 
-* **Zero Dependencies**: No need to install any packages. It dynamically loads Showdown.js and DOMPurify from a CDN. [Using NPM/Yarn](#usingnpmyarn)
+* No need to install any packages. It dynamically loads Showdown.js and DOMPurify from a CDN.
 
-* **Option to Install Dependencies**: For developers using a bundler like Vite, Webpack, or Rollup, they can install the dependencies themselves.
+* **Option to Install Dependencies**: For developers using a bundler like Vite, Webpack, or Rollup, they can install the dependencies themselves using NPM or Yarn. [Using NPM/Yarn](#usingnpmyarn)
 
 * **Flexible Content Sources**: Renders Markdown from inline content within the `<a-markdown>` tags or from a remote `.md` file specified in the `file` attribute.
 
-*   **Secure**: Built-in sanitization using DOMPurify to prevent XSS attacks. This is an opt-in feature via the `sanitize` attribute.
+* **Secure**: Built-in sanitization using DOMPurify to prevent XSS attacks. This is an opt-in feature via the `sanitize` attribute.
 
-*   **Highly Configurable**: All Showdown options are exposed as attributes or properties for fine-grained control over the Markdown conversion.
+* **Highly Configurable**: All Showdown options are exposed as attributes or properties for fine-grained control over the Markdown conversion.
 
-*   **Dynamic and Reactive**: Programmatically update the Markdown content or any Showdown option and the element will automatically re-render.
+* **Dynamic and Reactive**: Programmatically update the Markdown content or any Showdown option and the element will automatically re-render.
 
 ## Installation
 
@@ -30,14 +30,14 @@ There is no installation step required. Simply include the `a-markdown.js` scrip
 To render inline Markdown, place it directly inside the `<a-markdown>` tags.
 
 ```html
-<a-markdown>
-  # Hello, World!
+  <a-markdown>
+    # Hello, World!
 
-  This is a paragraph with **bold** and *italic* text.
+    This is a paragraph with **bold** and *italic* text.
 
-  - List item 1
-  - List item 2
-</a-markdown>
+    - List item 1
+    - List item 2
+  </a-markdown>
 ```
 ### From a File
 
@@ -79,8 +79,10 @@ a-markdown exposes many of Showdown's options as attributes. For example, to ena
   I :heart: Markdown!
 </a-markdown>
 ```
+The options which this component exposes are listed at the end of this document. [Available Options](#availableoptions)
 
 For a full list of available options, please refer to the Showdown Options Documentation.
+
 [Showdown Options Documentation](https://www.google.com/url?sa=E&q=https://github.com/showdownjs/showdown/options)
 
 ## Examples
@@ -106,10 +108,9 @@ You can enable multiple features at once. This example enables GitHub-style code
 For more complex configurations, you can pass a JSON object to the `options` attribute.
 
 ```html
-<a-markdown options='{"tables": true, "strikethrough": true, "ghCompatibleHeaderId": true}'>
-  | Header 1 | Header 2 |
-  |---|---|
-  | Cell 1 | Cell 2 |
+<a-markdown
+  options='{"tables": true, "strikethrough": true, "ghCompatibleHeaderId": true}'>
+  ...
 </a-markdown>
 ```
 
@@ -180,3 +181,38 @@ AMarkdown.DOMPurify = DOMPurify;
 
 The custom element is now ready to be used in your HTML and will not make any CDN requests for these libraries.
 
+## Available Options
+
+ - backslashEscapesHTMLTags
+ - completeHTMLDocument
+ - disableForced4SpacesIndentedSublists
+ - ellipsis
+ - emoji
+ - encodeEmails
+ - excludeTrailingPunctuationFromURLs
+ - ghCodeBlocks
+ - ghCompatibleHeaderId
+ - ghMentions
+ - ghMentionsLink
+ - headerLevelStart
+ - literalMidWordAsterisks
+ - literalMidWordUnderscores
+ - metadata
+ - noHeaderId
+ - omitExtraWLInCodeBlocks
+ - openLinksInNewWindow
+ - parseImgDimensions
+ - prefixHeaderId
+ - rawPrefixHeaderId
+ - rawHeaderId
+ - requireSpaceBeforeHeadingText
+ - simpleLineBreaks
+ - simplifiedAutoLink
+ - smartIndentationFix
+ - smoothLivePreview
+ - splitAdjacentBlockquotes
+ - strikethrough
+ - tables
+ - tablesHeaderId
+ - tasklists
+ - underline

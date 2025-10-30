@@ -27,17 +27,35 @@
 	</style>
 </head>
 <body>
-	<p><a href="test.html">testing...</a></p>
 	<header>
 		<h1>a-markdown Web Component</h1>
 		<p> A component that leverages the powerful <a href="https://github.com/showdownjs/showdown" target="_blank">Showdown</a> library to render markdown formatted text as HTML </p>
-		<details open id="readme">
+		<details id="readme">
 			<summary>README</summary>
 			<a-markdown file="README.md"></a-markdown>
 		</details>
 	</header>
 
-	<a-tabset active="2">
+	<section>
+	<h2>Quick Start</h2>
+		<a-code highlight>
+			<textarea>
+				<html>
+					<head>
+						...
+						<script type="module" src="path/to/a-markdown.min.js"></script>
+					</head>
+
+					<body>
+						<a-markdown file="path/to/markdown-file.md">
+						</a-markdown>
+					</body>
+				</html>
+			</textarea>
+		</a-code>
+	</section>
+
+	<a-tabset>
 		<strong slot="title">Attributes</strong>
 		<section slot="content">
 			<heading>
@@ -46,23 +64,7 @@
 
 			<div id="attr-settings" class="flex column stretch">
 
-				<div class="flex space-between">
-				<!-- sanitize -->
-					<check-box
-						input-id="sanitize"
-						label="sanitize"
-						value="true"
-						bind="a-markdown#attr-sanitize:sanitize"
-						tooltip="(boolean) [default false] >Whether to sanitize the converted HTML using DOMPurify.">
-					</check-box>
-
-					<a-markdown id="attr-sanitize" display="markdown">
-						A malicious script!
-						<script> function doSomethingEvil() {/*...*/}</script>
-					</a-markdown>
-				</div>
-
-				<div class="flex space-between">
+				<div class="card flex space-between">
 				<!-- file -->
 					<label for="attr-file">file</label>
 
@@ -80,11 +82,79 @@
 						<p>The URL of the markdown file to fetch.</p>
 					</a-tooltip>
 
-					<a-markdown id="attr-file" file="extra/example-one.md">
-						foo
-					</a-markdown>
+					<div class="flex column">
+						<a-markdown id="attr-file" file="extra/example-one.md">
+							foo
+						</a-markdown>
+
+						<a-bind
+							pull
+							model="a-markdown#attr-file"
+							property="file">
+							<output></output>
+						</a-bind>
+
+						<a-code highlight>
+							<textarea>
+								<a-markdown
+									file="path/to/file.md">
+								</a-markdown>
+							</textarea>
+						</a-code>
+					</div>
+				</div><!-- /attr-file -->
+
+				<div class="card flex space-between">
+				<!-- sanitize -->
+					<check-box
+						input-id="sanitize"
+						label="sanitize"
+						value="true"
+						bind="a-markdown#attr-sanitize:sanitize"
+						tooltip="(boolean) [default false]Whether to sanitize the converted HTML using DOMPurify.">
+					</check-box>
+
+					<div class="flex column">
+						<a-markdown id="attr-sanitize">
+							A malicious script!
+							[Click Me](javascript:alert('XSS_Attack'))
+						</a-markdown>
+
+						<a-code highlight>
+							<textarea>
+								<a-markdown sanitize>
+									...
+								</a-markdown>
+							</textarea>
+						</a-code>
+					</div>
 				</div>
 			</div><!-- /attr-settings -->
+
+			<div class="card flex space-between">
+			<!-- display -->
+				<span>display</span>
+				<a-tooltip position="modal">
+					<b slot="title">display</b>
+					<p>How to display the content. Can be:</p>
+					<ul>
+						<li>'converted': [default] The final rendered result.</li>
+						<li>'markdown': The original markdown text.</li>
+						<li>'html': Text of the raw HTML (including tags)</li>
+					</ul>
+				</a-tooltip>
+
+				<div class="flex column">
+					<a-code highlight>
+						<textarea>
+							<a-markdown
+								display="converted | html | markdown">
+								...
+							</a-markdown>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
 		</section>
 
 		<strong slot="title">Showdown Options</strong>
@@ -94,6 +164,18 @@
 
 				<pre style="white-space:collapse">
 					&lt;a-markdown options='{"property": "value"}'&gt;
+					...
+					&lt;/a-markdown&gt;
+				</pre>
+				or
+				<pre style="white-space:collapse">
+					&lt;a-markdown optionName&gt;
+					...
+					&lt;/a-markdown&gt;
+				</pre>
+				or
+				<pre style="white-space:collapse">
+					&lt;a-markdown optionName = "false"&gt;
 					...
 					&lt;/a-markdown&gt;
 				</pre>
@@ -110,20 +192,13 @@
 				</check-box>
 
 				<div class="flex column">
-					<a-markdown id="option-tables">
+					<a-markdown
+						id="option-tables">
 						| Heading One | Heading Two | Heading Three |
 						| :---------- | :---------: | ------------: |
 						| Cell A 1    | Cell A 2    | Cell A 3      |
 						| Cell B 1    | Cell B 2    | Cell B 3      |
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"tables": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -140,6 +215,7 @@
 
 				<div class="flex column">
 					<a-markdown
+						debug
 						id="option-tablesHeaderId"
 						display="html">
 						| Heading A |
@@ -147,14 +223,6 @@
 						| 100    		|
 						| *foo*  		|
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"tablesHeaderId": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -172,13 +240,6 @@
 					<a-markdown id="option-ellipsis" display="html" style="letter-spacing:.5rem">
 						...
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown options='{"ellipsis": false}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -197,14 +258,6 @@
 					<a-markdown id="option-strikethrough">
 						~~Some strikethrough text~~
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"strikethrough": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -225,14 +278,6 @@
 						line two.
 						line three.
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"simpleLineBreaks": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -254,14 +299,6 @@
 						# Header One
 						# Header Two
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"noHeaderId": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -282,14 +319,6 @@
 						display="html">
 						# Header One!
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"ghCompatibleHeaderId": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -310,14 +339,33 @@
 						display="html">
 						# header One
 					</a-markdown>
+				</div>
+			</div>
 
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"prefixHeaderId": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
+			<div class="card flex space-between">
+			<!-- ghCodeBlocks -->
+				<check-box
+					input-id="ghCodeBlocks"
+					label="ghCodeBlocks"
+					value="true"
+					bind="a-markdown#option-ghCodeBlocks:ghCodeBlocks"
+					tooltip="(boolean) [default true] Enable support for GitHub code block style.">
+				</check-box>
+
+				<div class="flex column">
+					<a-markdown
+						id="option-ghCodeBlocks"
+						display="converted">
+						normal text
+
+						```javascript
+						// code block
+						var foo = 'bar';
+						console.log(foo);
+						```
+
+						normal text
+					</a-markdown>
 				</div>
 			</div>
 
@@ -328,7 +376,7 @@
 					label="parseImgDimensions"
 					value="true"
 					bind="a-markdown#option-parseImgDimensions:parseImgDimensions"
-					tooltip="(boolean) [default false] Enable support for setting image dimensions from within markdown syntax. <strong>NOTE: This Showdown setting does not appear to do anything!</strong>">
+					tooltip="(boolean) [default true] Enable/Disable support for setting image dimensions from within markdown syntax. <strong>NOTE: This Showdown setting does not appear to do anything!</strong>">
 
 				</check-box>
 
@@ -339,14 +387,6 @@
 						![iguana](extra/iguana.png =200x80)
 						![iguana](extra/iguana.png =100x*)
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"parseImgDimensions": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -366,14 +406,6 @@
 						- [] Task One
 						- [x] Task Two
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"tasklists": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -391,14 +423,6 @@
 				<div class="flex column">
 					<a-markdown id="option-encodeEmails" file="extra/encode-email.md" display="html">
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"encodeEmails": false}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -417,14 +441,6 @@
 					<a-markdown id="option-emoji">
 						:smile:
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"emoji": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -436,20 +452,11 @@
 					value="true"
 					bind="a-markdown#option-splitAdjacentBlockquotes:splitAdjacentBlockquotes"
 					tooltip='(boolean) [default false] Split adjacent blockquote blocks.'>
-
 				</check-box>
 
 				<div class="flex column">
 					<a-markdown id="option-splitAdjacentBlockquotes" file="extra/blockquotes.md" display="html">
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"splitAdjacentBlockquotes": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -470,14 +477,6 @@
 						file="extra/backslashEscapesHTMLTags.md"
 						display="html">
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown
-								options='{"backslashEscapesHTMLTags": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -498,13 +497,6 @@
 						display="html">
 						[Link Text](https://developer.mozilla.org/)
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown options='{"openLinksInNewWindow": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 
@@ -524,114 +516,9 @@
 						id="option-ghMentions">
 						pinging @foo
 					</a-markdown>
-
-					<a-code highlight>
-						<textarea>
-							<a-markdown options='{"ghMentions": true}'>
-							</a-markdown>
-						</textarea>
-					</a-code>
 				</div>
 			</div>
 		</section>
 	</a-tabset>
-
-	<section>
-	<h2>Quick Start</h2>
-		<a-code highlight>
-			<textarea>
-				<html>
-					<head>
-						...
-						<script type="module" src="path/to/a-markdown.min.js"></script>
-					</head>
-
-					<body>
-						<a-markdown file="path/to/markdown-file.md">
-						</a-markdown>
-					</body>
-				</html>
-			</textarea>
-		</a-code>
-	</section>
-
-	<!-- ------------------------------------------------ -->
-
-	<section hidden>
-		<!-- deal with later -->
-
-
-
-		<div class="flex column gap0">
-		<!-- flavor -->
-			<!-- <label for="showdown-flavor">
-				Showdown Flavor
-			</label title="You can use flavors or presets so that showdown behaves like popular markdown flavors.">
-
-			<a-bind
-				model="a-markdown#demo-elem"
-				property="options.flavor"
-				func="setFlavor">
-
-					<select id="showdown-flavor">
-						<option value="">Select...</option>
-						<option value="original">
-							original (Original Markdown Spec)
-						</option>
-						<option value="vanilla">
-							vanilla (Showdown default options)
-						</option>
-						<option value="github">
-							github (GitHub Flavored Markdown)
-						</option>
-					</select>
-				</a-bind> -->
-		</div>
-
-		<div class="card flex space-between">
-		<!-- omitExtraWLInCodeBlocks -->
-			<!-- <check-box
-				input-id="omitExtraWLInCodeBlocks"
-				label="omitExtraWLInCodeBlocks"
-				value="true"
-				bind="a-markdown#option-omitExtraWLInCodeBlocks:options.omitExtraWLInCodeBlocks"
-				tooltip="(boolean) [default false] Omit the trailing newline in a code block.">
-			</check-box>
-
-			<a-markdown dedent id="option-omitExtraWLInCodeBlocks">
-				normal text
-
-						// code block
-						var foo = 'bar';
-						console.log(foo);
-
-				normal text
-			</a-markdown> -->
-		</div>
-
-		<div class="card flex space-between">
-		<!-- ghCodeBlocks -->
-			<!-- <check-box
-				input-id="ghCodeBlocks"
-				label="ghCodeBlocks"
-				value="true"
-				bind="a-markdown#option-ghCodeBlocks:options.ghCodeBlocks"
-				tooltip="(boolean) [default true] Enable support for GFM code block style.">
-			</check-box>
-
-			<a-markdown
-				debug
-				id="option-ghCodeBlocks"
-				display="converted">
-				normal text
-
-						// code block
-						var foo = 'bar';
-						console.log(foo);
-
-				normal text
-			</a-markdown>
-		</div> -->
-	</section>
 </body>
 </html>
