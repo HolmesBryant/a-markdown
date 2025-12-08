@@ -1,6 +1,7 @@
 a-markdown {
   --cell-max-width: 100px;
   --pad: .5rem;
+  display: block;
   opacity: 1;
   padding: var(--pad);
   transition: opacity 0.5s;
