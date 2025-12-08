@@ -2,6 +2,10 @@
 
 A standards-based, highly configurable custom HTML element that fetches, converts, and displays Markdown content as HTML.
 
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0).
+
+Demo: [https://holmesbryant.github.io/a-markdown/](https://holmesbryant.github.io/a-markdown/)
+
 ## Features
 
 * No need to install any packages. It dynamically loads Showdown.js and DOMPurify from a CDN.

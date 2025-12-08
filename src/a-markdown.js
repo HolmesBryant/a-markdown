@@ -38,11 +38,13 @@ export default class AMarkdown extends HTMLElement {
    * @see https://github.com/showdownjs/showdown#options
    */
   #options = {
-    tables: true,
     ellipsis: true,
+    encodeEmails: true,
     ghCodeBlocks: true,
+    ghCompatibleHeaderId: true,
+    ghMentions: true,
     parseImgDimensions: true,
-    encodeEmails: true
+    tables: true,
   };
 
   /**
@@ -313,10 +315,9 @@ export default class AMarkdown extends HTMLElement {
 
   /**
    * Lazily loads and returns the DOMPurify sanitizer instance.
-   *
-   * 1. Returns the instance-level sanitizer if it has already been loaded.
-   * 2. Uses `AMarkdown.DOMPurify` if it was provided by the user (for NPM-based projects).
-   * 3. Dynamically imports the module, attempting a bare package import ('dompurify') first,
+   * Returns the instance-level sanitizer if it has already been loaded.
+   * Uses `AMarkdown.DOMPurify` if it was provided by the user (for NPM-based projects).
+   * Dynamically imports the module, attempting a bare package import ('dompurify') first,
    *    and falling back to the `dompurifyUrl` (CDN) if that fails.
    *
    * Once loaded, it caches the module on the static `AMarkdown.DOMPurify` property to prevent
@@ -741,7 +742,6 @@ export default class AMarkdown extends HTMLElement {
 
   get underline() { return this.#options.underline; }
   set underline(value) {
-    // The new setter is just a simple one-liner
     this.#setOption('underline', this.#toBool(value));
   }
 }
