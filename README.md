@@ -69,6 +69,7 @@ All attributes can also be set as properties in JavaScript. For boolean attribut
 | Attribute | Property | Type    | Default        | Description |
 | :-------: | :------: | :-----: | :-------:      | :----------:|
 | file      | file     | string  | undefined      | The URL of the markdown file to fetch and render. |
+| src       | src      | string  | undefined      | Alias of 'file'.  |
 | sanitize  | sanitize | boolean | false          | If true, the rendered HTML is sanitized using DOMPurify. |
 | display   | display  | string  | 'converted'    | Controls the output. Can be 'converted' (renders HTML), 'markdown' (shows raw Markdown text), or 'html' (shows the converted HTML source code as text). |
 | options   | options  | object  | {tables: true} | A JSON string of options to pass to the Showdown converter. |
@@ -220,3 +221,9 @@ The custom element is now ready to be used in your HTML and will not make any CD
  - tablesHeaderId
  - tasklists
  - underline
+
+# Change Log
+
+- v1.1: added 'src' attribute as an alias of 'file';
+
+- v1.0 wooHoo!

@@ -1,7 +1,7 @@
 /**
  * @file A flexible web component that renders Markdown text as HTML.
  * @author Holmes Bryant <https://github.com/HolmesBryant>
- * @version 1.0.0
+ * @version 1.0.1
  * @license MIT
  */
 export default class AMarkdown extends HTMLElement {
@@ -29,6 +29,7 @@ export default class AMarkdown extends HTMLElement {
    * @type {string | undefined}
    */
   #file;
+  #src;
 
   /**
    * Options to pass to the Showdown converter.
@@ -147,6 +148,7 @@ export default class AMarkdown extends HTMLElement {
     'debug',
     'display',
     'file',
+    'src',
     'options',
     'sanitize',
     'backslashEscapesHTMLTags',
@@ -208,6 +210,7 @@ export default class AMarkdown extends HTMLElement {
           this.#display = value;
           break;
         case 'file':
+        case 'src':
           this.#file = value;
           break;
         case 'options':
@@ -511,6 +514,13 @@ export default class AMarkdown extends HTMLElement {
 
   get file() { return this.#file }
   set file(value) {
+    this.setAttribute('file', value);
+    this.#file = value;
+    this.#init(); // Changing the file requires a full re-initialization
+  }
+
+  get src() { return this.#file }
+  set src(value) {
     this.setAttribute('file', value);
     this.#file = value;
     this.#init(); // Changing the file requires a full re-initialization
