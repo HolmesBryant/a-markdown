@@ -1,4 +1,7 @@
 a-markdown {
+	--bg1-color: transparent;
+	--bg2-color: linen;
+	--text-color: rgb(20,20,20);
   --cell-max-width: 100px;
   --pad: .5rem;
   display: block;
@@ -10,13 +13,13 @@ a-markdown {
 
   & code,
   & pre {
+  	background: var(--bg2-color);
   	border-radius: 5px;
 		font-family: "Courier New", ui-monospace;
+		color: var(--text-color);
   }
 
   & pre {
-  	background: hsl(0, 0%, 10%);
-  	color:  white;
   	overflow-x: auto;
   	padding: 10px;
   }
@@ -34,6 +37,13 @@ a-markdown {
 	}
 
 	& .error { color: darkred; }
+}
+
+@media (prefers-color-scheme: dark) {
+	a-markdown {
+		--bg2-color: rgb(20, 20, 20);
+		--text-color: snow;
+	}
 }
 
 @media (min-width: 640px) {
