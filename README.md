@@ -224,6 +224,14 @@ The custom element is now ready to be used in your HTML and will not make any CD
 
 # Change Log
 
-- v1.1: added 'src' attribute as an alias of 'file';
+- v1.1:
+
+  - added 'src' attribute as an alias of 'file';
+  - improved asset loading (dynamic Showdown/DOMPurify imports with CDN fallback).
+  - imporved sanitizer handling.
+  - centralized options management.
+  - improved file/src attribute handling.
+  - improved dedent logic.
+  - added debounced rendering and a readiness flag.
 
 - v1.0 wooHoo!

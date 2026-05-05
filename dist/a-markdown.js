@@ -4,7 +4,7 @@
  * @version 1.1
  * @license MIT
  */
-export default class AMarkdown extends HTMLElement {
+class AMarkdown extends HTMLElement {
 
   // Attributes (have public getters / setters)
 
@@ -424,6 +424,7 @@ export default class AMarkdown extends HTMLElement {
     if (this.#file) {
         response = await fetch(this.#file);
         if (response.ok) {
+          response.text();
           const contentType = response.headers.get('Content-Type');
 
           if (contentType && !contentType.startsWith('text/markdown')) {
@@ -431,7 +432,7 @@ export default class AMarkdown extends HTMLElement {
           }
 
           this.#dedent = false;
-          promises.push(response);
+          promises.push(file);
 
         } else {
           throw new Error(`Unable to fetch markdown file: ${this.#file}`);
@@ -783,3 +784,5 @@ export default class AMarkdown extends HTMLElement {
 }
 
 if (!customElements.get('a-markdown')) customElements.define('a-markdown', AMarkdown);
+
+export { AMarkdown as default };
