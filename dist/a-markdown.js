@@ -424,7 +424,6 @@ class AMarkdown extends HTMLElement {
     if (this.#file) {
         response = await fetch(this.#file);
         if (response.ok) {
-          response.text();
           const contentType = response.headers.get('Content-Type');
 
           if (contentType && !contentType.startsWith('text/markdown')) {
@@ -432,7 +431,7 @@ class AMarkdown extends HTMLElement {
           }
 
           this.#dedent = false;
-          promises.push(file);
+          promises.push(response);
 
         } else {
           throw new Error(`Unable to fetch markdown file: ${this.#file}`);
