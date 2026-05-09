@@ -1,31 +1,34 @@
 a-markdown {
-	--bg1-color: transparent;
-	--bg2-color: linen;
-	--text-color: rgb(20,20,20);
+	--bg1-color: linen;
+	--bg2-color: hsl(30, 66.667%, 97%);
+	--border-color: silver;
+	--text-color: rgb(20, 20, 20);
   --cell-max-width: 100px;
   --pad: .5rem;
   display: block;
   opacity: 1;
+
+  background: var(--bg2-color);
   padding: var(--pad);
   transition: opacity 0.5s;
 
   &:empty { opacity: 0; }
 
-  & code,
-  & pre {
-  	background: var(--bg2-color);
-  	border-radius: 5px;
-		font-family: "Courier New", ui-monospace;
-		color: var(--text-color);
-  }
+  & code
+  { padding: 0; }
 
   & pre {
+  	background: var(--bg1-color);
+  	border-radius: 5px;
+  	color:	var(--text-color);
   	overflow-x: auto;
   	padding: 10px;
+  	margin-bottom: 1rem;
   }
 
 	& table {
 	  border-collapse: collapse;
+	  margin-bottom: 1rem;
 	  width: 100%;
 	}
 
@@ -39,17 +42,19 @@ a-markdown {
 	& .error { color: darkred; }
 }
 
-@media (prefers-color-scheme: dark) {
-	a-markdown {
-		--bg2-color: rgb(20, 20, 20);
-		--text-color: snow;
-	}
-}
-
 @media (min-width: 640px) {
 	a-markdown {
 	  --cell-max-width:  360px;
 	  --pad: 1rem;
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	a-markdown {
+		--bg1-color: rgb(20, 20, 20);
+		--bg2-color: rgb(40, 40, 40);
+		--border-color: dimgray;
+		--text-color: white;
 	}
 }
 
