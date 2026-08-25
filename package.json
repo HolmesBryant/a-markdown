@@ -1,5 +1,5 @@
 {
-  "name": "A-Markdown",
+  "name": "a-markdown",
   "description": "A web component that converts Markdown formatted text to HTML",
   "version": "1.1",
   "license": "GPL-3.0-or-later",
@@ -10,30 +10,30 @@
   "module": "./dist/a-markdown.min.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HolmesBryant/a-markdown.git"
+    "url": "https://github.com/HolmesBryant/a-markdown.git"
   },
   "keywords": [
     "module",
-    "component",
-    "markdown"
+    "component"
   ],
   "exports": {
     ".": "./dist/a-markdown.min.js",
     "./src/a-markdown.js": "./src/a-markdown.js"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "bugs": {
     "url": "https://github.com/HolmesBryant/a-markdown/issues"
   },
   "scripts": {
     "build": "rollup -c",
-    "dev": "vite"
+    "dev": "reload"
   },
   "devDependencies": {
-    "@roenlie/vite-plugin-import-css-sheet": "latest",
     "@rollup/plugin-node-resolve": "latest",
     "@rollup/plugin-terser": "latest",
-    "rollup": "latest",
-    "vite": "latest"
+    "rollup": "latest"
   }
 }

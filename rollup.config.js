@@ -1,6 +1,31 @@
 import resolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 
+/**
+ * Rollup plugin to intercept .css imports
+ * and inline them as Constructable Stylesheets.
+ */
+function importableStylesheet() {
+  return {
+    name: 'importable-stylesheet',
+    transform(code, id) {
+      if (id.endsWith('.css')) {
+        const minifiedCss = code.replace(/\r?\n|\r/g, '').replace(/\s{2,}/g, ' ');
+        const jsCode = `
+          const sheet = new CSSStyleSheet();
+          sheet.replaceSync(${JSON.stringify(minifiedCss)});
+          export default sheet;
+        `;
+
+        return {
+          code: jsCode,
+          map: null
+        };
+      }
+    }
+  };
+}
+
 export default {
   input: 'src/a-markdown.js',
   output: [
@@ -29,6 +54,7 @@ export default {
     }
   ],
   plugins: [
+    importableStylesheet(),
     resolve(),
   ]
 };

@@ -16,13 +16,8 @@ Normal Test
 
 `inline code`
 
-		<!-- indented code block -->
-		<div>
-			code block (indented 4 spaces)
-		</div>
-
 ```
-<!-- unindented code block -->
+<!-- code block -->
 <div>
 	code block (unindented)
 </div>
@@ -37,7 +32,7 @@ Normal Test
 | Cell A 1    | Cell A 2    | Cell A 3      |
 | Cell B 1    | Cell B 2    | Cell B 3      |
 
-<script>var malware="foo!"</script>
+<script>alert("foo!")</script>
 
 ---
 

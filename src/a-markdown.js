@@ -1,785 +1,320 @@
-/**
- * @file A flexible web component that renders Markdown text as HTML.
- * @author Holmes Bryant <https://github.com/HolmesBryant>
- * @version 1.1
- * @license MIT
- */
 export default class AMarkdown extends HTMLElement {
 
-  // Attributes (have public getters / setters)
-
-  /**
-   * Logs several variables to the console if true
-   * @type {boolean}
-   * @default false
-   */
-  debug = false;
-
-  /**
-   * How to display the content. Can be 'converted', 'markdown', or 'html'.
-   * @private
-   * @type {string}
-   * @default 'converted'
-   */
-  #display = 'converted';
-
-  /**
-   * The URL of the markdown file to fetch.
-   * @private
-   * @type {string | undefined}
-   */
   #file;
-  #src;
 
-  /**
-   * Options to pass to the Showdown converter.
-   * @private
-   * @type {object}
-   * @default {tables: true}
-   * @see https://github.com/showdownjs/showdown#options
-   */
-  #options = {
-    ellipsis: true,
-    encodeEmails: true,
-    ghCodeBlocks: true,
-    ghCompatibleHeaderId: true,
-    ghMentions: true,
-    parseImgDimensions: true,
-    tables: true,
-  };
+  #abortController;
+  #container;
+  #slot;
+  #spaces = 100;
 
-  /**
-   * Whether to sanitize the converted HTML using DOMPurify.
-   * @private
-   * @type {boolean}
-   * @default false
-   */
-  #sanitize = false;
+  static rex = {
+    header: /^(#{1,6})\s+(.*)$/,
+    list: /^(\s*)([-*+]|\d+\.)\s+(.*)$/,
+    codeBlock: /^```([a-z0-9-]*)$/i,
+    image: /!\[([^\]]*)\]\(([^)]+)\)/g,
+    link: /\[([^\]]*)\]\(([^)]+)\)/g,
+    inlineCode: /`([^`]+)`/g,
+    boldAsterisk: /\*\*([^*]+)\*\*/g,
+    boldUnderscore: /__([^_]+)__/g,
+    italicAsterisk: /\*([^*]+)\*/g,
+    italicUnderscore: /_([^_]+)_/g,
+    checkbox: /^\[([ xX]?)\]\s+(.*)$/
+  }
 
-  ////// Private Properties //////
-
-  /**
-   * The Showdown converter instance.
-   * @private
-   * @type {object | undefined}
-   */
-  #converter;
-
-  /**
-   * The timer ID for the debounce render
-   * @private
-   * @type {number | null}
-   */
-  #debounceTimer = null;
-
-  /**
-   * Whether to remove leading whitespace from the markdown content.
-   * When processing inline Markdown, this is set to true
-   * @private
-   * @type {boolean}
-   * @default true
-   */
-  #dedent = false;
-
-  /**
-   * The DOMPurify instance.
-   * @private
-   * @type {DOMPurify}
-   */
-  #dompurify;
-
-  /**
-   * The rendered HTML
-   * @private
-   * @type {string}
-   */
-  #html;
-
-  /**
-   * The fetched markdown content.
-   * @private
-   * @type {string | undefined}
-   */
-  #markdown;
-
-  /**
-   * The Showdown instance
-   * @private
-   * @type {Showdown}
-   */
-  #showdown;
-
-  /**
-   * Flag to indicate if the component has finished its initial asynchronous setup.
-   * @private
-   * @type {boolean}
-   */
-  #isReady = false;
-
-  ////// Public Properties //////
-
-  /**
-   * The URL to load the DOMPurify library from.
-   * @type {string}
-   */
-  dompurifyUrl = 'https://cdn.jsdelivr.net/npm/dompurify@3.3.0/+esm';
-
-  /**
-   * The URL to load the Showdown library from.
-   * @type {string}
-   */
-  showdownUrl = 'https://cdn.jsdelivr.net/npm/showdown@2.1.0/+esm';
-
-  ////// Static Properties //////
-
-  /**
-   * Holds the Showdown library module. Can be set globally.
-   * @static
-   */
-  static Showdown;
-
-  /**
-   * Holds the DOMPurify library module. Can be set globally.
-   * @static
-   */
-  static DOMPurify;
-
-  static observedAttributes = [
-    'debug',
-    'display',
-    'file',
-    'src',
-    'options',
-    'sanitize',
-    'backslashEscapesHTMLTags',
-    'completeHTMLDocument',
-    'disableForced4SpacesIndentedSublists',
-    'ellipsis',
-    'emoji',
-    'encodeEmails',
-    'excludeTrailingPunctuationFromURLs',
-    'ghCodeBlocks',
-    'ghCompatibleHeaderId',
-    'ghMentions',
-    'ghMentionsLink',
-    'headerLevelStart',
-    'literalMidWordAsterisks',
-    'literalMidWordUnderscores',
-    'metadata',
-    'noHeaderId',
-    'omitExtraWLInCodeBlocks',
-    'openLinksInNewWindow',
-    'parseImgDimensions',
-    'prefixHeaderId',
-    'rawPrefixHeaderId',
-    'rawHeaderId',
-    'requireSpaceBeforeHeadingText',
-    'simpleLineBreaks',
-    'simplifiedAutoLink',
-    'smartIndentationFix',
-    'smoothLivePreview',
-    'splitAdjacentBlockquotes',
-    'strikethrough',
-    'tables',
-    'tablesHeaderId',
-    'tasklists',
-    'underline',
-  ]
+  static template = document.createElement('template');
+  static {
+    this.template.innerHTML = `
+      <style>
+      </style>
+      <div id="container"></div>
+      <slot hidden id="slot"></slot>
+    `;
+  }
 
   constructor() {
     super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.append(AMarkdown.template.content.cloneNode(true));
+    this.#container = this.shadowRoot.getElementById('container');
+    this.#slot = this.shadowRoot.getElementById('slot');
   }
 
-  // Lifecycle Methods
-
   attributeChangedCallback(attr, oldval, newval) {
-    if (oldval === newval) return;
-    const isBoolean = !(attr in {display:1, file:1, options:1, ghMentionsLink:1});
-    const value = isBoolean ? newval !== null && newval !== 'false' : newval;
-
-    if (isBoolean) {
-      // For Showdown options, use the centralized setter
-      this.#setOption(attr, value);
-    } else {
-      // Handle the component's own attributes
-      switch (attr) {
-        case 'debug':
-          this.debug = value;
-          break;
-        case 'display':
-          this.#display = value;
-          break;
-        case 'file':
-        case 'src':
-          this.#file = value;
-          break;
-        case 'options':
-          try {
-            // Merge new options with existing ones
-            const newOptions = JSON.parse(newval);
-            this.#options = { ...this.#options, ...newOptions };
-            if (this.#isReady) this.#init(); // Re-initialize if ready
-          } catch (error) {
-            console.error('a-markdown: Failed to parse options.', error);
-          }
-          break;
-        case 'sanitize':
-          this.#sanitize = value;
-          this.#getSanitizer();
-          break;
-      }
+    if (newval === oldval) return;
+    switch (attr) {
+    case 'file':
+      this.#file = newval;
+      break;
     }
   }
 
   connectedCallback() {
-    this.#init();
+    this.#abortController = new AbortController();
+    this._addListeners();
   }
 
   disconnectedCallback() {
-    clearTimeout(this.#debounceTimer);
-    this.#converter = null;
-    this.#showdown = null;
-    this.#dompurify = null;
-    if (this.#file instanceof URL) {
-      URL.revokeObjectURL(this.#file);
-    }
-    this.#file = null;
-  }
-
-  // Private Methods
-
-  /**
-   * Updates the internal options object immediately.
-   * If the component is ready, it also updates the live converter and re-renders.
-   * @private
-   * @param {string} key The option name.
-   * @param {*} value The option value.
-   */
-  #setOption(key, value) {
-    this.#options[key] = value;
-    if (this.#isReady) {
-      this.#converter.setOption(key, value);
-      this.#debouncedRender();
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
     }
   }
 
+  // --- Private Methods ---
+
+  _addListeners() {
+    this.#slot.addEventListener('slotchange', event => {
+      this.#container.innerHTML = this.parse(this.innerHTML);
+    }, { signal: this.#abortController.signal });
+  }
+
   /**
-   * Helper to normalize boolean values from attributes/properties.
-   * @private
+   * Orchestrates the parsing of the full Markdown document.
    */
-  #toBool(value) {
-    return value !== false && value !== 'false';
-  }
+  parse(markdown) {
+    if (!markdown) return '';
 
-  /**
-   * Converts a string to a blob URL.
-   * @param {string} str The string to convert.
-   * @returns {string} The blob URL.
-   * @private
-  */
-  #convertToBlobUrl(str) {
-    const blob = new Blob([str], { type: 'text/markdown' });
-    return URL.createObjectURL(blob);
-  }
+    const lines = markdown.split('\n');
+    const state = {
+      inCodeBlock: false,
+      listStack: [],
+      buffer: []
+    };
 
-  /**
-   * Removes leading whitespace from a string.
-   * @param {string} str The string to dedent.
-   * @returns {string} The dedented string.
-   * @private
-  */
-  #doDedent(str) {
-    const lines = (str || '').split('\n');
-    let minIndent = null;
-
-    for (const line of lines) {
-      if (line.trim().length > 0) {
-        const indentMatch = line.match(/^(\s*)/);
-        const currentIndent = indentMatch?.[0].length ?? 0;
-        if (minIndent === null || currentIndent < minIndent) {
-          minIndent = currentIndent;
-        }
-      }
-    }
-    return (minIndent > 0) ? lines.map(line => line.substring(minIndent)).join('\n') : str;
-  }
-
-  /**
-   * Sanitizes HTML using DOMPurify.
-   * @async
-   * @param {string} html The HTML to sanitize.
-   * @returns {Promise<string>} The sanitized HTML.
-   * @private
-   */
-  async #doSanitize(html) {
-    const sanitizer = await this.#getSanitizer();
-    return sanitizer.sanitize(html);
-  }
-
-  /**
-   * Lazily loads and returns the DOMPurify sanitizer instance.
-   * Returns the instance-level sanitizer if it has already been loaded.
-   * Uses `AMarkdown.DOMPurify` if it was provided by the user (for NPM-based projects).
-   * Dynamically imports the module, attempting a bare package import ('dompurify') first,
-   *    and falling back to the `dompurifyUrl` (CDN) if that fails.
-   *
-   * Once loaded, it caches the module on the static `AMarkdown.DOMPurify` property to prevent
-   * redundant loads by other instances of the component.
-   *
-   * @private
-   * @async
-   * @returns {Promise<DOMPurify>} A promise that resolves with the loaded DOMPurify module/instance.
-   */
-  async #getSanitizer() {
-    // Check if DOMPurify was already loaded
-    if (this.#dompurify) return this.#dompurify;
-
-    // Check if it was set statically by the user
-    if (AMarkdown.DOMPurify && typeof AMarkdown.DOMPurify.sanitize === 'function') {
-      this.#dompurify = AMarkdown.DOMPurify;
-      return this.#dompurify;
+    for (let i = 0; i < lines.length; i++) {
+      this.processLine(lines[i], state);
     }
 
-    //Load it dynamically (NPM with CDN fallback)
-    try {
-      const mods = await this.#loadModule('dompurify', this.dompurifyUrl);
-      if (mods && typeof mods.default.sanitize === 'function') {
-        this.#dompurify = mods.default;
-        AMarkdown.DOMPurify = this.#dompurify;
-        return this.#dompurify;
-      }
-    } catch (error) {
-      console.warn('a-markdown: Unable to load DOMPurify. Markdown content is not sanitized!');
-    }
+    this.closeOpenLists(state);
+    const spaceRex = new RegExp(`[ \\t]{${this.#spaces + 1}}`, 'g');
+    const html = state.buffer.join('\n');
+    return html.replace(spaceRex, '');
   }
 
   /**
-   * Dynamically loads a module, trying a package name first (for NPM)
-   * and falling back to a URL (for CDN).
-   * @private
-   * @param {string} pkgName - The npm package name.
-   * @param {string} url - The CDN URL to fall back to.
-   * @returns {Promise<object>} The loaded module.
+   * Routes a single line to the appropriate structural handler.
    */
-  async #loadModule(pkgName, url) {
-    try {
-      // Try to import using the package name. Bundlers will resolve this.
-      return await import(pkgName);
-    } catch (error) {
-      // Try to import from the CDN URL.
-      return await import(url);
+  processLine(line, state) {
+    const spaces = line.match(/[ \t]+/);
+    if (spaces && spaces[0].length < this.#spaces) this.#spaces = spaces[0].length;
+
+    if (this.handleCodeBlocks(line, state)) return;
+    if (state.inCodeBlock) {
+      this.addCodeLine(line, state);
+      return;
     }
+
+    if (line.trim() === '') {
+      this.closeOpenLists(state);
+      // ignore empty lines
+      return;
+    }
+
+    if (this.handleLists(line, state)) return;
+
+    // Close lists if a non-list item appears
+    this.closeOpenLists(state);
+
+    if (this.handleHeaders(line, state)) return;
+
+    this.handleParagraph(line, state);
   }
 
   /**
-   * Asynchronously loads all necessary assets for the component.
-   *
-   * Checks if a `Showdown` module has been provided (`AMarkdown.Showdown`).
-   * If not, it proceeds to load it dynamically, attempting an NPM import before falling back to the CDN URL.
-   *
-   * If the `sanitize` property is true, it calls the `#getSanitizer()` method to ensure DOMPurify is loaded.
-   *
-   * Fetches the markdown source. If the `file` attribute is present, it fetches from that URL.
-   * Otherwise, it creates a Blob from the element's `textContent` and fetches from the resulting object URL.
-   *
-   * @private
-   * @async
-   * @returns {Promise<void>} A promise that resolves when all assets have been fetched and processed.
-   * @throws {Error} Throws an error if the Showdown library fails to load, as it is a critical dependency.
+   * Escapes dangerous characters.
    */
-  async #setAssets() {
-    let response;
-    const promises = [];
+  escapeHTML(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return text.replace(/[&<>"']/g, match => map[match]);
+  }
 
-    // --- Load Showdown ---
-    // Check if it was set statically first
-    if (AMarkdown.Showdown) {
-      this.#showdown = AMarkdown.Showdown;
-    } else {
-      // Otherwise, load it dynamically (NPM -> CDN)
-      const showdownModule = await this.#loadModule('showdown', this.showdownUrl);
+  /**
+   * Prevents javascript: and data: URI XSS attacks in links and images.
+   */
+  sanitizeURL(url) {
+    const sanitized = url.replace(/[\x00-\x1F\x7F]/g, '').trim();
+    if (/^(javascript|vbscript|data):/i.test(sanitized)) {
+      return '#'; // Block unsafe protocols
+    }
+    return this.escapeHTML(sanitized); // Ensure attributes remain safe
+  }
 
-      if (showdownModule) {
-        this.#showdown = showdownModule.default;
-        // Cache for other instances
-        AMarkdown.Showdown = this.#showdown;
-        promises.push(showdownModule);
+  /**
+   * Toggles block state and writes <pre><code> wrappers.
+   */
+  handleCodeBlocks(line, state) {
+    const working = line.trim();
+    const match = working.match(AMarkdown.rex.codeBlock);
+    if (match) {
+      if (state.inCodeBlock) {
+        state.buffer.push('</code></pre>');
+        state.inCodeBlock = false;
       } else {
-        console.error('a-markdown: Unable to load Showdown module. Markdown will not be converted.');
+        this.closeOpenLists(state);
+        const lang = match[1] ? ` class="lang-${this.escapeHTML(match[1])}"` : '';
+        state.buffer.push(`<pre><code${lang}>`);
+        state.inCodeBlock = true;
       }
+      return true;
     }
-
-    // --- Load DOMPurify (if needed) ---
-    if (this.#sanitize) {
-        // The getSanitizer method now handles the loading logic
-        const dompurifyModule = this.#getSanitizer();
-        if (dompurifyModule) {
-          promises.push(dompurifyModule);
-        } else {
-          console.warn('a-markdown: Unable to load DOMPurify. Markdown content is not sanitized!');
-        }
-    }
-
-    // --- Fetch Markdown Content ---
-    if (this.#file) {
-        response = await fetch(this.#file);
-        if (response.ok) {
-          const contentType = response.headers.get('Content-Type');
-
-          if (contentType && !contentType.startsWith('text/markdown')) {
-            throw new Error(`a-markdown: Server responded, but not with a Markdown file. Make sure ${this.#file} exists and is a Markdown file.`);
-          }
-
-          this.#dedent = false;
-          promises.push(response);
-
-        } else {
-          throw new Error(`Unable to fetch markdown file: ${this.#file}`);
-        }
-    } else if (this.textContent.trim().length > 0) {
-      this.#dedent = true;
-      const blob = new Blob([this.textContent], { type: 'text/markdown' });
-      response = fetch(URL.createObjectURL(blob));
-    }
-
-
-    // --- Await all concurrent tasks ---
-    const results = await Promise.allSettled(promises);
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error(`a-markdown: Failed to load a required asset.`, result.reason);
-      }
-    }
-
-    if (response) {
-      const markdown = await (await response).text();
-      this.#markdown = this.#dedent ? this.#doDedent(markdown) : markdown;
-    } else {
-      this.#markdown = '';
-    }
+    return false;
   }
 
   /**
-   * Initializes the component.
-   * Now uses the #options object that may have been populated before init completes.
+   * Adds an escaped line of text inside a code block.
    */
-  async #init() {
-    try {
-      await this.#setAssets();
-      // Use the centrally managed #options object for instantiation
-      this.#converter = new this.#showdown.Converter(this.#options);
-
-      await this.#render();
-
-      // Set the ready flag. Any setters called after this point will trigger a re-render.
-      this.#isReady = true;
-    } catch (error) {
-      console.error(error);
-    }
+  addCodeLine(line, state) {
+    state.buffer.push(this.escapeHTML(line));
   }
 
   /**
-   * Debounces the render function to prevent rapid updates.
-   * @private
+   * Parses and wraps header elements (H1 - H6).
    */
-  #debouncedRender() {
-    clearTimeout(this.#debounceTimer);
-    this.#debounceTimer = setTimeout(() => this.#render(), this.renderDebounce);
+  handleHeaders(line, state) {
+    const working = line.trim();
+    const match = working.match(AMarkdown.rex.header);
+    if (match) {
+      const level = match[1].length;
+      const content = this.processInlineElements(match[2]);
+      state.buffer.push(`<h${level}>${content}</h${level}>`);
+      return true;
+    }
+    return false;
   }
 
   /**
-   * Converts markdown and updates the element's content.
-   *
-   * Transforms the internal markdown string to HTML using the Showdown converter.
-   * It then populates the element's DOM based on the current `display` mode
-   * ('converted', 'markdown', or 'html').
-   *
-   * @private
-   * @async
-   * @returns {Promise<void>} Resolves when rendering is complete.
-   * @throws {Error} If Showdown converter is not initialized.
+   * Identifies list items and triggers stack synchronization.
    */
-  async #render() {
-    if (!this.#showdown) throw new Error('Showdown library not found!');
-    if (!this.#converter) throw new Error('Showdown converter not initialized!');
-    this.html = await this.#toHtml(this.#converter, this.#markdown);
-    if (this.#display === 'markdown') {
-      this.textContent = this.#markdown;
-    } else if (this.#display === 'html') {
-      this.textContent = this.#html;
-    } else {
-      this.innerHTML = this.#html;
+  handleLists(line, state) {
+    const match = line.match(AMarkdown.rex.list);
+    if (!match) return false;
+
+    const indent = match[1].replace(/\t/g, '    ').length; // Normalize tabs to 4 spaces
+    const marker = match[2];
+    const content = match[3];
+    const listType = /^\d/.test(marker) ? 'ol' : 'ul';
+
+    this.syncListStack(state, indent, listType);
+
+    const parsedContent = this.processInlineElements(content);
+    state.buffer.push(`<li>${parsedContent}</li>`);
+    return true;
+  }
+
+  /**
+   * Opens and closes <ul> / <ol> elements to match indentation depth.
+   */
+  syncListStack(state, indent, listType) {
+    const stack = state.listStack;
+
+    while (stack.length > 0 && indent < stack[stack.length - 1].indent) {
+      state.buffer.push(`</${stack.pop().type}>`);
+    }
+
+    if (stack.length > 0 && indent === stack[stack.length - 1].indent && stack[stack.length - 1].type !== listType) {
+      state.buffer.push(`</${stack.pop().type}>`);
+    }
+
+    if (stack.length === 0 || indent > stack[stack.length - 1].indent) {
+      stack.push({ type: listType, indent: indent });
+      state.buffer.push(`<${listType}>`);
     }
   }
 
   /**
-   * Transforms markdown to HTML.
-   * @async
-   * @private
-   * @returns {Promise<string>} The converted HTML.
-  */
-  async #toHtml() {
-    const content = this.#markdown;
-    try {
-      let html = this.#converter.makeHtml(content);
-      if (this.#sanitize) html = await this.#doSanitize(html);
-      return html;
-    } catch (error) {
-      throw new Error(`Error transforming markdown: ${error.message}`, { cause: error });
+   * Empties the list stack when lists end.
+   */
+  closeOpenLists(state) {
+    while (state.listStack.length > 0) {
+      state.buffer.push(`</${state.listStack.pop().type}>`);
     }
   }
 
-  // Getters / Setters
-
-  get display() { return this.#display }
-  set display(value) {
-    this.setAttribute('display', value);
-    this.#display = value; // Update internal state
-    if (this.#isReady) this.#debouncedRender(); // Re-render if ready
+  /**
+   * Wraps lines of standard text.
+   */
+  handleParagraph(line, state) {
+    const content = this.processInlineElements(line);
+    state.buffer.push(`<p>${content}</p>`);
   }
+
+  /**
+   * Orchestrates the processing of inline items.
+   * Note: Sequence order matters.
+   */
+  processInlineElements(text) {
+    let html = this.escapeHTML(text);
+
+    html = this.processCheckboxes(html);
+    // Images must precede links to avoid regex collisions
+    html = this.processImages(html);
+    html = this.processLinks(html);
+    html = this.processInlineCode(html);
+    html = this.processBold(html);
+    html = this.processItalic(html);
+
+    return html;
+  }
+
+  /**
+   * Process checkboxes
+   */
+  processCheckboxes(text) {
+    const working = text.trim();
+    return working.replace(AMarkdown.rex.checkbox, (match, state, rest) => {
+      const checked = state.toLowerCase() === 'x' ? 'checked ' : '';
+      return `<input type="checkbox" ${checked}disabled> ${rest}`;
+    });
+  }
+
+  /**
+   * Process images
+   */
+  processImages(text) {
+    return text.replace(AMarkdown.rex.image, (match, alt, url) => {
+      return `<img src="${this.sanitizeURL(url)}" alt="${alt}">`;
+    });
+  }
+
+  /**
+   * Process links
+   */
+  processLinks(text) {
+    return text.replace(AMarkdown.rex.link, (match, text, url) => {
+      // Note: Since Images run first, Image markdown won't accidentally trigger link markdown
+      return `<a href="${this.sanitizeURL(url)}">${text}</a>`;
+    });
+  }
+
+  /**
+   * Process inline code
+   */
+  processInlineCode(text) {
+    return text.replace(AMarkdown.rex.inlineCode, '<code>$1</code>');
+  }
+
+  /**
+   * Process bold
+   */
+  processBold(text) {
+    return text
+      .replace(AMarkdown.rex.boldAsterisk, '<strong>$1</strong>')
+      .replace(AMarkdown.rex.boldUnderscore, '<strong>$1</strong>');
+  }
+
+  /**
+   * Process italic
+   */
+  processItalic(text) {
+    return text
+      .replace(AMarkdown.rex.italicAsterisk, '<em>$1</em>')
+      .replace(AMarkdown.rex.italicUnderscore, '<em>$1</em>');
+  }
+
+  // --- Getters / Setters ---
 
   get file() { return this.#file }
-  set file(value) {
-    this.setAttribute('file', value);
-    this.#file = value;
-    this.#init(); // Changing the file requires a full re-initialization
-  }
-
-  get src() { return this.#file }
-  set src(value) {
-    this.setAttribute('file', value);
-    this.#file = value;
-    this.#init(); // Changing the file requires a full re-initialization
-  }
-
-  get html() { return this.#html }
-  set html(value) {
-    this.#html = value;
-  }
-
-  get markdown() { return this.#markdown }
-  set markdown(value) {
-    this.#markdown = value;
-    // If the component is ready, render the new markdown.
-    // If not, #init will pick up this new value when it runs.
-    if (this.#isReady) {
-      this.#debouncedRender();
-    }
-  }
-
-  get options() { return this.#options }
-  set options(value) {
-    this.setAttribute('options', JSON.stringify(value));
-  }
-
-  get sanitize() { return this.#sanitize }
-  set sanitize(value) {
-    const boolValue = this.#toBool(value);
-    this.setAttribute('sanitize', boolValue);
-    this.#sanitize = boolValue;
-    if (this.#isReady) this.#debouncedRender();
-  }
-
-  /**************************************************************
-  * Showdown Options
-  *************************************************************/
-
-  get backslashEscapesHTMLTags() { return this.#options.backslashEscapesHTMLTags }
-  set backslashEscapesHTMLTags(value) {
-    if (window.abind) abind.update(this, 'backslashEscapesHTMLTags', value);
-    this.#setOption('backslashEscapesHTMLTags', this.#toBool(value));
-  }
-
-  get completeHTMLDocument() { return this.#options.completeHTMLDocument }
-  set completeHTMLDocument(value) {
-    if (window.abind) abind.update(this, 'completeHTMLDocument', value);
-    this.#setOption('completeHTMLDocument', this.#toBool(value));
-  }
-
-  get disableForced4SpacesIndentedSublists() { return this.#options.XXX }
-  set disableForced4SpacesIndentedSublists(value) {
-    if (window.abind) abind.update(this, 'disableForced4SpacesIndentedSublists', value);
-    this.#setOption('disableForced4SpacesIndentedSublists', this.#toBool(value));
-  }
-
-  get ellipsis() { return this.#options.ellipsis }
-  set ellipsis(value) {
-    if (window.abind) abind.update(this, 'ellipsis', value);
-    this.#setOption('ellipsis', this.#toBool(value));
-  }
-
-  get emoji() { return this.#options.emoji }
-  set emoji(value) {
-    if (window.abind) abind.update(this, 'emoji', value);
-    this.#setOption('emoji', this.#toBool(value));
-  }
-
-  get encodeEmails() { return this.#options.encodeEmails }
-  set encodeEmails(value) {
-    if (window.abind) abind.update(this, 'encodeEmails', value);
-    this.#setOption('encodeEmails', this.#toBool(value));
-  }
-
-  get excludeTrailingPunctuationFromURLs() { return this.#options.excludeTrailingPunctuationFromURLs }
-  set excludeTrailingPunctuationFromURLs(value) {
-    if (window.abind) abind.update(this, 'excludeTrailingPunctuationFromURLs', value);
-    this.#setOption('excludeTrailingPunctuationFromURLs', this.#toBool(value));
-  }
-
-  get ghCodeBlocks() { return this.#options.ghCodeBlocks }
-  set ghCodeBlocks(value) {
-    if (window.abind) abind.update(this, 'ghCodeBlocks', value);
-    this.#setOption('ghCodeBlocks', this.#toBool(value));
-  }
-
-  get ghCompatibleHeaderId() { return this.#options.ghCompatibleHeaderId }
-  set ghCompatibleHeaderId(value) {
-    if (window.abind) abind.update(this, 'ghCompatibleHeaderId', value);
-    this.#setOption('ghCompatibleHeaderId', this.#toBool(value));
-  }
-
-  get ghMentions() { return this.#options.ghMentions }
-  set ghMentions(value) {
-    if (window.abind) abind.update(this, 'ghMentions', value);
-    this.#setOption('ghMentions', this.#toBool(value));
-  }
-
-  get ghMentionsLink() { return this.#options.ghMentionsLink }
-  set ghMentionsLink(value) {
-    if (window.abind) abind.update(this, 'ghMentionsLink', value);
-    this.#setOption('ghMentionsLink', this.#toBool(value));
-  }
-
-  get headerLevelStart() { return this.#options.headerLevelStart }
-  set headerLevelStart(value) {
-    if (window.abind) abind.update(this, 'headerLevelStart', value);
-    this.#setOption('headerLevelStart', this.#toBool(value));
-  }
-
-  get literalMidWordAsterisks() { return this.#options.literalMidWordAsterisks }
-  set literalMidWordAsterisks(value) {
-    if (window.abind) abind.update(this, 'literalMidWordAsterisks', value);
-    this.#setOption('literalMidWordAsterisks', this.#toBool(value));
-  }
-
-  get literalMidWordUnderscores() { return this.#options.literalMidWordUnderscores }
-  set literalMidWordUnderscores(value) {
-    if (window.abind) abind.update(this, 'literalMidWordUnderscores', value);
-    this.#setOption('literalMidWordUnderscores', this.#toBool(value));
-  }
-
-  get metadata() { return this.#options.metadata }
-  set metadata(value) {
-    if (window.abind) abind.update(this, 'metadata', value);
-    this.#setOption('metadata', this.#toBool(value));
-  }
-
-  get noHeaderId() { return this.#options.noHeaderId }
-  set noHeaderId(value) {
-    if (window.abind) abind.update(this, 'noHeaderId', value);
-    this.#setOption('noHeaderId', this.#toBool(value));
-  }
-
-  get omitExtraWLInCodeBlocks() { return this.#options.omitExtraWLInCodeBlocks }
-  set omitExtraWLInCodeBlocks(value) {
-    if (window.abind) abind.update(this, 'omitExtraWLInCodeBlocks', value);
-    this.#setOption('omitExtraWLInCodeBlocks', this.#toBool(value));
-  }
-
-  get openLinksInNewWindow() { return this.#options.openLinksInNewWindow }
-  set openLinksInNewWindow(value) {
-    if (window.abind) abind.update(this, 'openLinksInNewWindow', value);
-    this.#setOption('openLinksInNewWindow', this.#toBool(value));
-  }
-
-  get parseImgDimensions() { return this.#options.parseImgDimensions }
-  set parseImgDimensions(value) {
-    if (window.abind) abind.update(this, 'parseImgDimensions', value);
-    this.#setOption('parseImgDimensions', this.#toBool(value));
-  }
-
-  get prefixHeaderId() { return this.#options.prefixHeaderId }
-  set prefixHeaderId(value) {
-    if (window.abind) abind.update(this, 'prefixHeaderId', value);
-    this.#setOption('prefixHeaderId', this.#toBool(value));
-  }
-
-  get rawPrefixHeaderId() { return this.#options.rawPrefixHeaderId }
-  set rawPrefixHeaderId(value) {
-    if (window.abind) abind.update(this, 'rawPrefixHeaderId', value);
-    this.#setOption('rawPrefixHeaderId', this.#toBool(value));
-  }
-
-  get rawHeaderId() { return this.#options.rawHeaderId }
-  set rawHeaderId(value) {
-    if (window.abind) abind.update(this, 'rawHeaderId', value);
-    this.#setOption('rawHeaderId', this.#toBool(value));
-  }
-
-  get requireSpaceBeforeHeadingText() { return this.#options.requireSpaceBeforeHeadingText }
-  set requireSpaceBeforeHeadingText(value) {
-    if (window.abind) abind.update(this, 'requireSpaceBeforeHeadingText', value);
-    this.#setOption('requireSpaceBeforeHeadingText', this.#toBool(value));
-  }
-
-  get simpleLineBreaks() { return this.#options.simpleLineBreaks }
-  set simpleLineBreaks(value) {
-    if (window.abind) abind.update(this, 'simpleLineBreaks', value);
-    this.#setOption('simpleLineBreaks', this.#toBool(value));
-  }
-
-  get simplifiedAutoLink() { return this.#options.simplifiedAutoLink }
-  set simplifiedAutoLink(value) {
-    if (window.abind) abind.update(this, 'simplifiedAutoLink', value);
-    this.#setOption('simplifiedAutoLink', this.#toBool(value));
-  }
-
-  get smartIndentationFix() { return this.#options.smartIndentationFix }
-  set smartIndentationFix(value) {
-    if (window.abind) abind.update(this, 'smartIndentationFix', value);
-    this.#setOption('smartIndentationFix', this.#toBool(value));
-  }
-
-  get smoothLivePreview() { return this.#options.smoothLivePreview }
-  set smoothLivePreview(value) {
-    if (window.abind) abind.update(this, 'smoothLivePreview', value);
-    this.#setOption('smoothLivePreview', this.#toBool(value));
-  }
-
-  get splitAdjacentBlockquotes() { return this.#options.splitAdjacentBlockquotes }
-  set splitAdjacentBlockquotes(value) {
-    if (window.abind) abind.update(this, 'splitAdjacentBlockquotes', value);
-    this.#setOption('splitAdjacentBlockquotes', this.#toBool(value));
-  }
-
-  get strikethrough() { return this.#options.strikethrough }
-  set strikethrough(value) {
-    if (window.abind) abind.update(this, 'strikethrough', value);
-    this.#setOption('strikethrough', this.#toBool(value));
-  }
-
-  get tables() { return this.#options.tables }
-  set tables(value) {
-    if (window.abind) abind.update(this, 'tables', value);
-    this.#setOption('tables', this.#toBool(value));
-  }
-
-  get tablesHeaderId() { return this.#options.tablesHeaderId }
-  set tablesHeaderId(value) {
-    if (window.abind) abind.update(this, 'tablesHeaderId', value);
-    this.#setOption('tablesHeaderId', this.#toBool(value));
-  }
-
-  get tasklists() { return this.#options.tasklists }
-  set tasklists(value) {
-    if (window.abind) abind.update(this, 'tasklists', value);
-    this.#setOption('tasklists', this.#toBool(value));
-  }
-
-  get underline() { return this.#options.underline; }
-  set underline(value) {
-    this.#setOption('underline', this.#toBool(value));
-  }
+  set file(value) { this.setAttribute('file', value) }
 }
 
 if (!customElements.get('a-markdown')) customElements.define('a-markdown', AMarkdown);
