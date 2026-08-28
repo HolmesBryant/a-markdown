@@ -8,7 +8,11 @@
 	<script type="module" src="src/a-markdown.js"></script>
 	<!-- <script type="module" src="dist/a-markdown.min.js"></script> -->
 
+	<!-- <script type="module" src="extra/a-code.min.js"></script> -->
+	<script type="module" src="extra/a-code.js"></script>
+
 	<link rel="stylesheet" href="extra/styles.css">
+	<link rel="stylesheet" href="dist/a-markdown.css">
 </head>
 <body>
 	<header>
@@ -24,7 +28,7 @@
 	</header>
 
 	<section>
-		<a-markdown>
+		<a-markdown highlight>
 			# Header 1
 			## Header 2
 			### Header 3
@@ -40,32 +44,37 @@
 
 			_Italic Text (underscore)_
 
-			- List Item
-			- List Item
+			- List Item (Dash)
+			- List Item (Dash)
 				- Sub Item
 				- Sub Item
-			- List item
+			- List item (Dash)
 
-			* List Item
-			* List Item
+			* List Item (Asterix)
+			* List Item (Asterix)
 				* Sub Item
 				* Sub Item
-			* List Item
+			* List Item (Asterix)
 
-			+ List Item
-			+ List Item
+			+ List Item (Plus)
+			+ List Item (Plus)
 				+ Sub Item
 				+ Sub Item
-			+ List Item
+			+ List Item (Plus)
 
-			1. List Item
-			2. List Item
+			1. Ordered List Item
+			2. Ordered List Item
 				1. Sub Item
 				2. Sub Item
-			3. List Item
+			3. Ordered List Item
 
 
 			`inline code`
+
+			```html
+				<!-- some html -->
+				<div>A div</div>
+			```
 
 			```javascript
 			// some javascript
@@ -74,9 +83,12 @@
 			}
 			```
 
-			```html
-			<!-- some html -->
-			<div>A div</div>
+			```
+			/* Some CSS */
+			div {
+				border: 1px solid black;
+				padding: 1rem;
+			}
 			```
 
 			[A Link](foo.html)
@@ -86,10 +98,10 @@
 			[] checkbox
 			[x] checkbox checked
 		</a-markdown>
+
 	</section>
-
+		<h2>Examples</h2>
 	<section>
-
 	</section>
 </body>
 </html>

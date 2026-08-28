@@ -1,16 +1,40 @@
+/**
+ * @file src/a-markdown.js
+ * @author Holmes Bryant <https://github.com/HolmesBryant>
+ * @license GPL-3.0
+ * @version 2.0
+ */
+
+import Highlighter from './Highlighter.js';
+
+/**
+ * A custom element that converts Markdown syntax to HTML.
+ * Supports headers, bold, italic, unordered lists, ordered lists, inline code, code blocks, links, images, checkboxes.
+ * @class AMarkdown
+ * @extends HTMLElement
+ */
 export default class AMarkdown extends HTMLElement {
 
   #file;
+  #highlight = false;
 
   #abortController;
+  #connected = false;
   #container;
+  #highlighters;
   #slot;
   #spaces = 100;
+
+  static observedAttributes = [
+    'file',
+    'highlight'
+  ]
 
   static rex = {
     header: /^(#{1,6})\s+(.*)$/,
     list: /^(\s*)([-*+]|\d+\.)\s+(.*)$/,
     codeBlock: /^```([a-z0-9-]*)$/i,
+    escapedTag: /\\</g,
     image: /!\[([^\]]*)\]\(([^)]+)\)/g,
     link: /\[([^\]]*)\]\(([^)]+)\)/g,
     inlineCode: /`([^`]+)`/g,
@@ -25,8 +49,40 @@ export default class AMarkdown extends HTMLElement {
   static {
     this.template.innerHTML = `
       <style>
+        :host {
+          --code-background: gainsboro;
+          --block-pad: .5rem;
+          --list-indent: 1.5rem;
+          --block-indent: 2;
+
+          display: block;
+          tab-size: var(--block-indent);
+        }
+
+        code {
+          background: var(--code-background);
+          padding: 0 2px;
+        }
+
+        pre:has(code) {
+          padding: 0 0 var(--block-pad) var(--block-pad);
+        }
+
+        ol, ul {
+          padding-left: var(--list-indent);
+        }
+
+        pre {
+          background: var(--code-background);
+        }
+
+        @media (prefers-color-scheme: dark) {
+          :host {
+            --code-background: rgb(20,20,20);
+          }
+        }
       </style>
-      <div id="container"></div>
+      <div id="container" part="html"></div>
       <slot hidden id="slot"></slot>
     `;
   }
@@ -44,6 +100,20 @@ export default class AMarkdown extends HTMLElement {
     switch (attr) {
     case 'file':
       this.#file = newval;
+
+      if (this.#highlight && this.#connected) {
+        // setTimeout(() => this._highlight(), 0);
+        }
+      break;
+    case 'highlight':
+      this.#highlight = this.hasAttribute('highlight');
+      if (this.#connected) {
+        if (this.#highlight) {
+          this._highlight();
+        } else {
+          this._destroyHighlights();
+        }
+      }
       break;
     }
   }
@@ -51,6 +121,11 @@ export default class AMarkdown extends HTMLElement {
   connectedCallback() {
     this.#abortController = new AbortController();
     this._addListeners();
+    /*if (this.#highlight) {
+      setTimeout(() => this._highlight(), 0);
+    }*/
+
+    this.#connected = true;
   }
 
   disconnectedCallback() {
@@ -65,8 +140,111 @@ export default class AMarkdown extends HTMLElement {
   _addListeners() {
     this.#slot.addEventListener('slotchange', event => {
       this.#container.innerHTML = this.parse(this.innerHTML);
+
+      if (this.#highlight) {
+        this._highlight();
+      } else {
+        this._destroyHighlights();
+      }
     }, { signal: this.#abortController.signal });
   }
+
+  /**
+   * Destroys the current highlighter instance and cleans up artifacts.
+   *
+   * @private
+   */
+  _destroyHighlights() {
+    if (Object.keys(this.#highlighters).length === 0) return;
+    console.trace(this.#highlighters);
+    /*try {
+      if (this.#highlighters != null) {
+        Object.values(this.#highlighters).forEach(h => h.destroy());
+        this.#highlighters = null;
+      }
+    } catch (error) {
+      console.error("a-markdown.destroyHighlights(): Error destroying Highlighter:", error);
+    }*/
+  }
+
+  /**
+   * Escapes dangerous characters.
+   */
+  escapeHTML(text) {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '\\<': '&lt;'
+    };
+    return text.replace(/[&<>"']|\\</g, match => map[match]);
+  }
+
+  /**
+   * Finds all code blocks in the container and applies highlighting.
+   */
+  _highlight() {
+    const codeBlocks = this.#container.querySelectorAll('pre[part="pre"] code');
+    if (!codeBlocks.length) return;
+    if (!this.#highlighters) this.#highlighters = new Map();
+
+    for (const block of codeBlocks) {
+      let syntax, highlighter;
+      const cssClass = [...block.classList].find(item => item.startsWith('lang-'));
+
+      if (!cssClass) {
+        syntax = 'html';
+      } else {
+        syntax = cssClass.split('-')[1];
+      }
+
+      if (this.#highlighters.has(syntax)) {
+        highlighter = this.#highlighters.get(syntax);
+      } else {
+        highlighter = new Highlighter(this, syntax, null);
+        this.#highlighters.set(syntax, highlighter);
+      }
+
+      try {
+        const textNode = Array
+        .from(block.childNodes)
+        .find(n => n.nodeType === Node.TEXT_NODE);
+
+        if (textNode) highlighter.highlight(textNode);
+      } catch (error) {
+        console.error('a-markdown.highlight(): Highlighting failed', error);
+      }
+    }
+  }
+
+  /**
+   * Initializes the syntax highlighter.
+   *
+   * @private
+   * @param {string|boolean} [syntax=this.#highlight] - The syntax language to highlight.
+   * @param {Object|null} [palette=this.palette] - The color palette to use.
+   */
+  /*
+  _highlightCode(node, syntax, palette) {
+    if (!node) return;
+    if (this.#highlighter) this.#highlighter.destroy();
+    // if (syntax === 'false' || syntax === false) return;
+    if (!syntax) syntax = 'html';
+    this.highlighter = new Highlighter(this, syntax, palette);
+
+    try {
+      const textNode = Array
+        .from(node.childNodes)
+        .find(n => n.nodeType === Node.TEXT_NODE);
+
+      if (textNode) this.highlighter.highlight(textNode);
+
+    } catch (error) {
+      console.error("Highlighting failed", error);
+    }
+  }*/
 
   /**
    * Orchestrates the parsing of the full Markdown document.
@@ -121,14 +299,6 @@ export default class AMarkdown extends HTMLElement {
   }
 
   /**
-   * Escapes dangerous characters.
-   */
-  escapeHTML(text) {
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-    return text.replace(/[&<>"']/g, match => map[match]);
-  }
-
-  /**
    * Prevents javascript: and data: URI XSS attacks in links and images.
    */
   sanitizeURL(url) {
@@ -151,8 +321,8 @@ export default class AMarkdown extends HTMLElement {
         state.inCodeBlock = false;
       } else {
         this.closeOpenLists(state);
-        const lang = match[1] ? ` class="lang-${this.escapeHTML(match[1])}"` : '';
-        state.buffer.push(`<pre><code${lang}>`);
+        const lang = match[1] ? 'lang-' + this.escapeHTML(match[1]) : '';
+        state.buffer.push(`<pre part="pre"><code class="${lang}" part="pre code ${lang}">`);
         state.inCodeBlock = true;
       }
       return true;
@@ -176,7 +346,7 @@ export default class AMarkdown extends HTMLElement {
     if (match) {
       const level = match[1].length;
       const content = this.processInlineElements(match[2]);
-      state.buffer.push(`<h${level}>${content}</h${level}>`);
+      state.buffer.push(`<h${level} part="h${level}">${content}</h${level}>`);
       return true;
     }
     return false;
@@ -197,7 +367,7 @@ export default class AMarkdown extends HTMLElement {
     this.syncListStack(state, indent, listType);
 
     const parsedContent = this.processInlineElements(content);
-    state.buffer.push(`<li>${parsedContent}</li>`);
+    state.buffer.push(`<li part="li ${listType}-li">${parsedContent}</li>`);
     return true;
   }
 
@@ -217,7 +387,7 @@ export default class AMarkdown extends HTMLElement {
 
     if (stack.length === 0 || indent > stack[stack.length - 1].indent) {
       stack.push({ type: listType, indent: indent });
-      state.buffer.push(`<${listType}>`);
+      state.buffer.push(`<${listType} part="${listType}">`);
     }
   }
 
@@ -249,6 +419,7 @@ export default class AMarkdown extends HTMLElement {
     // Images must precede links to avoid regex collisions
     html = this.processImages(html);
     html = this.processLinks(html);
+    html = this.processEscapedTags(html);
     html = this.processInlineCode(html);
     html = this.processBold(html);
     html = this.processItalic(html);
@@ -263,8 +434,15 @@ export default class AMarkdown extends HTMLElement {
     const working = text.trim();
     return working.replace(AMarkdown.rex.checkbox, (match, state, rest) => {
       const checked = state.toLowerCase() === 'x' ? 'checked ' : '';
-      return `<input type="checkbox" ${checked}disabled> ${rest}`;
+      return `<input type="checkbox" ${checked}disabled part="checkbox ${checked}"> ${rest}`;
     });
+  }
+
+  processEscapedTags(text) {
+    return text;
+    // const match = text.match(/\\</);
+    // console.log(text)
+    // return text.replace(AMarkdown.rex.escapedTag, "&lt;");
   }
 
   /**
@@ -272,7 +450,7 @@ export default class AMarkdown extends HTMLElement {
    */
   processImages(text) {
     return text.replace(AMarkdown.rex.image, (match, alt, url) => {
-      return `<img src="${this.sanitizeURL(url)}" alt="${alt}">`;
+      return `<img src="${this.sanitizeURL(url)}" alt="${alt}" part="img">`;
     });
   }
 
@@ -282,7 +460,7 @@ export default class AMarkdown extends HTMLElement {
   processLinks(text) {
     return text.replace(AMarkdown.rex.link, (match, text, url) => {
       // Note: Since Images run first, Image markdown won't accidentally trigger link markdown
-      return `<a href="${this.sanitizeURL(url)}">${text}</a>`;
+      return `<a href="${this.sanitizeURL(url)}" part="a">${text}</a>`;
     });
   }
 
@@ -290,7 +468,7 @@ export default class AMarkdown extends HTMLElement {
    * Process inline code
    */
   processInlineCode(text) {
-    return text.replace(AMarkdown.rex.inlineCode, '<code>$1</code>');
+    return text.replace(AMarkdown.rex.inlineCode, '<code part="code">$1</code>');
   }
 
   /**
@@ -298,8 +476,8 @@ export default class AMarkdown extends HTMLElement {
    */
   processBold(text) {
     return text
-      .replace(AMarkdown.rex.boldAsterisk, '<strong>$1</strong>')
-      .replace(AMarkdown.rex.boldUnderscore, '<strong>$1</strong>');
+      .replace(AMarkdown.rex.boldAsterisk, '<strong part="strong">$1</strong>')
+      .replace(AMarkdown.rex.boldUnderscore, '<strong part="strong">$1</strong>');
   }
 
   /**
@@ -307,14 +485,17 @@ export default class AMarkdown extends HTMLElement {
    */
   processItalic(text) {
     return text
-      .replace(AMarkdown.rex.italicAsterisk, '<em>$1</em>')
-      .replace(AMarkdown.rex.italicUnderscore, '<em>$1</em>');
+      .replace(AMarkdown.rex.italicAsterisk, '<em part="em">$1</em>')
+      .replace(AMarkdown.rex.italicUnderscore, '<em part="em">$1</em>');
   }
 
   // --- Getters / Setters ---
 
   get file() { return this.#file }
   set file(value) { this.setAttribute('file', value) }
+
+  get highlight() { return this.#highlight }
+  set highlight(value) { this.toggleAttribute('highlight', value != null && value !== false) }
 }
 
 if (!customElements.get('a-markdown')) customElements.define('a-markdown', AMarkdown);
