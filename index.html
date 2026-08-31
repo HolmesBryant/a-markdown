@@ -8,27 +8,61 @@
 	<script type="module" src="src/a-markdown.js"></script>
 	<!-- <script type="module" src="dist/a-markdown.min.js"></script> -->
 
-	<!-- <script type="module" src="extra/a-code.min.js"></script> -->
-	<script type="module" src="extra/a-code.js"></script>
+	<script type="module" src="extra/a-menu.min.js"></script>
+	<script type="module" src="extra/a-bind.min.js"></script>
+	<script type="module" src="extra/a-code.min.js"></script>
 
 	<link rel="stylesheet" href="extra/styles.css">
 	<link rel="stylesheet" href="dist/a-markdown.css">
+	<link rel="stylesheet" href="extra/a-menu.css">
 </head>
 <body>
 	<header>
 		<h1>a-markdown Web Component</h1>
-		<p> A component that renders Markdown syntax as HTML</p>
+		<p> A custom element that renders Markdown syntax as HTML</p>
 
 		<p><a href="tests/index.html" target="_blank">Tests</a></p>
 
 		<details id="readme">
 			<summary>README</summary>
-			<a-markdown file="README.md"></a-markdown>
+			<!-- <a-markdown file="README.md"></a-markdown> -->
 		</details>
 	</header>
 
-	<section>
-		<a-markdown highlight>
+	<section class="flex top nowrap">
+		<a-bindgroup model="dom:#demo">
+			<a-menu
+				open
+				show-icon=""
+				class="card flex240">
+				<strong slot="label">Attributes</strong>
+
+				<div class="flex column">
+					<label for="demo-file">file</label>
+
+					<a-bind prop="file">
+						<select id="demo-file">
+							<option value="">Inline Markdown</option>
+							<option>exampleA.md</option>
+							<option>exampleB.md</option>
+						</select>
+					</a-bind>
+
+					<a-bind prop="file">
+						<output>...</output>
+					</a-bind>
+				</div>
+
+				<div class="flex">
+					<input type="checkbox" id="demo-highlight">
+					<label for="demo-highlight">highlight</label>
+				</div>
+			</a-menu>
+		</a-bindgroup>
+
+		<a-markdown
+			id="demo"
+			class="card flex1">
 			# Header 1
 			## Header 2
 			### Header 3
@@ -40,7 +74,7 @@
 
 			__Bold Text (double underscore)__
 
-			*Italic Text (asterix) *
+			*Italic Text (asterix)*
 
 			_Italic Text (underscore)_
 
@@ -68,8 +102,22 @@
 				2. Sub Item
 			3. Ordered List Item
 
+			[A Link](exampleA.md)
 
-			`inline code`
+			![alt text](extra/pic.png)
+
+			[] checkbox
+			[x] checkbox checked
+
+			> A blockquote. Exercitation incididunt id aliqua aute occaecat sed non qui eiusmod in culpa dolore exercitation aliquip do ullamco esse ullamco pariatur laboris sed.
+
+			> Some multi-line
+			> blockquote text
+
+			> A blockquote
+			>> with a nested blockquote
+
+			`<p>Inline code</p>`
 
 			```html
 				<!-- some html -->
@@ -91,16 +139,33 @@
 			}
 			```
 
-			[A Link](foo.html)
+			```python
+			# Some python
+			#!/usr/bin/env python3
 
-			![alt text](extra/pic.png)
+			def get_item_cost(name):
+				costs = {"sword": 50, "potion": 10}
+				if name in costs: return costs[name]
+				else: return 0
 
-			[] checkbox
-			[x] checkbox checked
+			result = get_item_cost("sword")
+			print(result)
+			```
+
+			```php
+			// Some php
+			function calculateDamage($type, $level) {
+				if ($type === 'fire') { return $level * 2; }
+				elseif ($type === 'ice') { return $level * 3; }
+				else { return $level; }
+			}
+
+			echo calculateDamage('fire', 5);
+			```
 		</a-markdown>
-
 	</section>
-		<h2>Examples</h2>
+
+	<h2>Examples</h2>
 	<section>
 	</section>
 </body>

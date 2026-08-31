@@ -62,7 +62,7 @@ export default class Highlighter {
   /**
    * Creates an instance of Highlighter.
    *
-   * @param {HTMLElement} element - The host element containing the code.
+   * @param {HTMLElement} element - The host element containing the code. Element must support attachShadow().
    * @param {string} syntax - The syntax language identifier.
    * @param {Object|string} palette - The color palette definition.
    * @param {string} [id] - A unique identifier for the highlighter instance.

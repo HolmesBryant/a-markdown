@@ -6,6 +6,9 @@
  */
 
 import Highlighter from './Highlighter.js';
+import styles from './a-markdown-shadow.css' with {type: 'css'};
+
+const abindUpdate = Symbol.for('abind.update');
 
 /**
  * A custom element that converts Markdown syntax to HTML.
@@ -15,15 +18,17 @@ import Highlighter from './Highlighter.js';
  */
 export default class AMarkdown extends HTMLElement {
 
-  #file;
-  #highlight = false;
+  // -- Attributes --
+  _file;
+  _highlight = false;
 
-  #abortController;
-  #connected = false;
-  #container;
-  #highlighters;
-  #slot;
-  #spaces = 100;
+  // -- Properties
+  _abortController;
+  _connected = false;
+  _container;
+  _highlighters = [];
+  _slot;
+  _spaces = 100;
 
   static observedAttributes = [
     'file',
@@ -31,57 +36,24 @@ export default class AMarkdown extends HTMLElement {
   ]
 
   static rex = {
-    header: /^(#{1,6})\s+(.*)$/,
-    list: /^(\s*)([-*+]|\d+\.)\s+(.*)$/,
-    codeBlock: /^```([a-z0-9-]*)$/i,
-    escapedTag: /\\</g,
-    image: /!\[([^\]]*)\]\(([^)]+)\)/g,
-    link: /\[([^\]]*)\]\(([^)]+)\)/g,
-    inlineCode: /`([^`]+)`/g,
+    blockquote: /^((?:>|&gt;)+)\s+(.*)/,
     boldAsterisk: /\*\*([^*]+)\*\*/g,
     boldUnderscore: /__([^_]+)__/g,
+    checkbox: /^\[([ xX]?)\]\s+(.*)$/,
+    codeBlock: /^```([a-z0-9-]*)$/i,
+    escapedTag: /\\</g,
+    header: /^(#{1,6})\s+(.*)$/,
+    image: /!\[([^\]]*)\]\(([^)]+)\)/g,
+    inlineCode: /`([^`]+)`/g,
     italicAsterisk: /\*([^*]+)\*/g,
     italicUnderscore: /_([^_]+)_/g,
-    checkbox: /^\[([ xX]?)\]\s+(.*)$/
+    link: /\[([^\]]*)\]\(([^)]+)\)/g,
+    list: /^(\s*)([-*+]|\d+\.)\s+(.*)/,
   }
 
   static template = document.createElement('template');
   static {
     this.template.innerHTML = `
-      <style>
-        :host {
-          --code-background: gainsboro;
-          --block-pad: .5rem;
-          --list-indent: 1.5rem;
-          --block-indent: 2;
-
-          display: block;
-          tab-size: var(--block-indent);
-        }
-
-        code {
-          background: var(--code-background);
-          padding: 0 2px;
-        }
-
-        pre:has(code) {
-          padding: 0 0 var(--block-pad) var(--block-pad);
-        }
-
-        ol, ul {
-          padding-left: var(--list-indent);
-        }
-
-        pre {
-          background: var(--code-background);
-        }
-
-        @media (prefers-color-scheme: dark) {
-          :host {
-            --code-background: rgb(20,20,20);
-          }
-        }
-      </style>
       <div id="container" part="html"></div>
       <slot hidden id="slot"></slot>
     `;
@@ -90,45 +62,36 @@ export default class AMarkdown extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.shadowRoot.adoptedStyleSheets = [styles];
     this.shadowRoot.append(AMarkdown.template.content.cloneNode(true));
-    this.#container = this.shadowRoot.getElementById('container');
-    this.#slot = this.shadowRoot.getElementById('slot');
+    this._container = this.shadowRoot.getElementById('container');
+    this._slot = this.shadowRoot.getElementById('slot');
   }
+
+  // -- Lifecycle Methods --
 
   attributeChangedCallback(attr, oldval, newval) {
     if (newval === oldval) return;
     switch (attr) {
     case 'file':
-      this.#file = newval;
-
-      if (this.#highlight && this.#connected) {
-        // setTimeout(() => this._highlight(), 0);
-        }
+      this._file = newval;
       break;
+
     case 'highlight':
-      this.#highlight = this.hasAttribute('highlight');
-      if (this.#connected) {
-        if (this.#highlight) {
-          this._highlight();
-        } else {
-          this._destroyHighlights();
-        }
-      }
+      this._highlight = this.hasAttribute('highlight');
       break;
     }
   }
 
   connectedCallback() {
-    this.#abortController = new AbortController();
+    this._abortController = new AbortController();
     this._addListeners();
-    /*if (this.#highlight) {
-      setTimeout(() => this._highlight(), 0);
-    }*/
-
-    this.#connected = true;
+    this._connected = true;
   }
 
   disconnectedCallback() {
+    // this._destroyHighlights();
+
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -138,224 +101,67 @@ export default class AMarkdown extends HTMLElement {
   // --- Private Methods ---
 
   _addListeners() {
-    this.#slot.addEventListener('slotchange', event => {
-      this.#container.innerHTML = this.parse(this.innerHTML);
-
-      if (this.#highlight) {
-        this._highlight();
-      } else {
-        this._destroyHighlights();
-      }
-    }, { signal: this.#abortController.signal });
+    this._slot.addEventListener('slotchange', event => {
+      this._container.innerHTML = this._parse(this.innerHTML);
+    }, { signal: this._abortController.signal });
   }
 
   /**
-   * Destroys the current highlighter instance and cleans up artifacts.
-   *
-   * @private
+   * Adds an escaped line of text inside a code block.
    */
-  _destroyHighlights() {
-    if (Object.keys(this.#highlighters).length === 0) return;
-    console.trace(this.#highlighters);
-    /*try {
-      if (this.#highlighters != null) {
-        Object.values(this.#highlighters).forEach(h => h.destroy());
-        this.#highlighters = null;
-      }
-    } catch (error) {
-      console.error("a-markdown.destroyHighlights(): Error destroying Highlighter:", error);
-    }*/
+  _addCodeLine(line, state) {
+    state.buffer.push(this._escapeHTML(line));
+  }
+
+  /**
+   * Empties the list stack when lists end.
+   */
+  _closeOpenLists(state) {
+    while (state.listStack.length > 0) {
+      state.buffer.push(`</${state.listStack.pop().type}>`);
+    }
   }
 
   /**
    * Escapes dangerous characters.
    */
-  escapeHTML(text) {
+  _escapeHTML(text) {
     const map = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
       "'": '&#39;',
-      '\\<': '&lt;'
+      '\\<': '&lt;',
+      '\\>': '&gt;'
     };
-    return text.replace(/[&<>"']|\\</g, match => map[match]);
+    return text.replace(/[&<>"']|\\<|\\>/g, match => map[match]);
   }
 
   /**
-   * Finds all code blocks in the container and applies highlighting.
+   * Toggles block state and writes <pre><code> wrapper.
    */
-  _highlight() {
-    const codeBlocks = this.#container.querySelectorAll('pre[part="pre"] code');
-    if (!codeBlocks.length) return;
-    if (!this.#highlighters) this.#highlighters = new Map();
-
-    for (const block of codeBlocks) {
-      let syntax, highlighter;
-      const cssClass = [...block.classList].find(item => item.startsWith('lang-'));
-
-      if (!cssClass) {
-        syntax = 'html';
-      } else {
-        syntax = cssClass.split('-')[1];
-      }
-
-      if (this.#highlighters.has(syntax)) {
-        highlighter = this.#highlighters.get(syntax);
-      } else {
-        highlighter = new Highlighter(this, syntax, null);
-        this.#highlighters.set(syntax, highlighter);
-      }
-
-      try {
-        const textNode = Array
-        .from(block.childNodes)
-        .find(n => n.nodeType === Node.TEXT_NODE);
-
-        if (textNode) highlighter.highlight(textNode);
-      } catch (error) {
-        console.error('a-markdown.highlight(): Highlighting failed', error);
-      }
-    }
-  }
-
-  /**
-   * Initializes the syntax highlighter.
-   *
-   * @private
-   * @param {string|boolean} [syntax=this.#highlight] - The syntax language to highlight.
-   * @param {Object|null} [palette=this.palette] - The color palette to use.
-   */
-  /*
-  _highlightCode(node, syntax, palette) {
-    if (!node) return;
-    if (this.#highlighter) this.#highlighter.destroy();
-    // if (syntax === 'false' || syntax === false) return;
-    if (!syntax) syntax = 'html';
-    this.highlighter = new Highlighter(this, syntax, palette);
-
-    try {
-      const textNode = Array
-        .from(node.childNodes)
-        .find(n => n.nodeType === Node.TEXT_NODE);
-
-      if (textNode) this.highlighter.highlight(textNode);
-
-    } catch (error) {
-      console.error("Highlighting failed", error);
-    }
-  }*/
-
-  /**
-   * Orchestrates the parsing of the full Markdown document.
-   */
-  parse(markdown) {
-    if (!markdown) return '';
-
-    const lines = markdown.split('\n');
-    const state = {
-      inCodeBlock: false,
-      listStack: [],
-      buffer: []
-    };
-
-    for (let i = 0; i < lines.length; i++) {
-      this.processLine(lines[i], state);
-    }
-
-    this.closeOpenLists(state);
-    const spaceRex = new RegExp(`[ \\t]{${this.#spaces + 1}}`, 'g');
-    const html = state.buffer.join('\n');
-    return html.replace(spaceRex, '');
-  }
-
-  /**
-   * Routes a single line to the appropriate structural handler.
-   */
-  processLine(line, state) {
-    const spaces = line.match(/[ \t]+/);
-    if (spaces && spaces[0].length < this.#spaces) this.#spaces = spaces[0].length;
-
-    if (this.handleCodeBlocks(line, state)) return;
-    if (state.inCodeBlock) {
-      this.addCodeLine(line, state);
-      return;
-    }
-
-    if (line.trim() === '') {
-      this.closeOpenLists(state);
-      // ignore empty lines
-      return;
-    }
-
-    if (this.handleLists(line, state)) return;
-
-    // Close lists if a non-list item appears
-    this.closeOpenLists(state);
-
-    if (this.handleHeaders(line, state)) return;
-
-    this.handleParagraph(line, state);
-  }
-
-  /**
-   * Prevents javascript: and data: URI XSS attacks in links and images.
-   */
-  sanitizeURL(url) {
-    const sanitized = url.replace(/[\x00-\x1F\x7F]/g, '').trim();
-    if (/^(javascript|vbscript|data):/i.test(sanitized)) {
-      return '#'; // Block unsafe protocols
-    }
-    return this.escapeHTML(sanitized); // Ensure attributes remain safe
-  }
-
-  /**
-   * Toggles block state and writes <pre><code> wrappers.
-   */
-  handleCodeBlocks(line, state) {
+  _handleCodeBlock(line, state) {
     const working = line.trim();
     const match = working.match(AMarkdown.rex.codeBlock);
-    if (match) {
-      if (state.inCodeBlock) {
-        state.buffer.push('</code></pre>');
-        state.inCodeBlock = false;
-      } else {
-        this.closeOpenLists(state);
-        const lang = match[1] ? 'lang-' + this.escapeHTML(match[1]) : '';
-        state.buffer.push(`<pre part="pre"><code class="${lang}" part="pre code ${lang}">`);
-        state.inCodeBlock = true;
-      }
-      return true;
-    }
-    return false;
-  }
+    if (!match) return false;
 
-  /**
-   * Adds an escaped line of text inside a code block.
-   */
-  addCodeLine(line, state) {
-    state.buffer.push(this.escapeHTML(line));
-  }
-
-  /**
-   * Parses and wraps header elements (H1 - H6).
-   */
-  handleHeaders(line, state) {
-    const working = line.trim();
-    const match = working.match(AMarkdown.rex.header);
-    if (match) {
-      const level = match[1].length;
-      const content = this.processInlineElements(match[2]);
-      state.buffer.push(`<h${level} part="h${level}">${content}</h${level}>`);
-      return true;
+    if (state.inCodeBlock) {
+      state.buffer.push('</code></pre>');
+      state.inCodeBlock = false;
+    } else {
+      this._closeOpenLists(state);
+      const lang = match[1] ? `lang-${match[1]}` : '';
+      state.buffer.push(`<pre part="pre"><code class="${lang}" part="pre code ${lang}">`);
+      state.inCodeBlock = true;
     }
-    return false;
+    return true;
   }
 
   /**
    * Identifies list items and triggers stack synchronization.
    */
-  handleLists(line, state) {
+  _handleList(line, state) {
     const match = line.match(AMarkdown.rex.list);
     if (!match) return false;
 
@@ -364,17 +170,245 @@ export default class AMarkdown extends HTMLElement {
     const content = match[3];
     const listType = /^\d/.test(marker) ? 'ol' : 'ul';
 
-    this.syncListStack(state, indent, listType);
+    this._syncListStack(state, indent, listType);
 
-    const parsedContent = this.processInlineElements(content);
+    const parsedContent = this._routeInlineElements(content);
     state.buffer.push(`<li part="li ${listType}-li">${parsedContent}</li>`);
     return true;
   }
 
   /**
+   * Wraps lines of standard text.
+   */
+  _handleParagraphs(line, state) {
+    const content = this._routeInlineElements(line);
+    state.buffer.push(`<p>${content}</p>`);
+  }
+
+  /**
+   * Orchestrates the parsing of the full Markdown document.
+   */
+  _parse(markdown) {
+    if (!markdown) return '';
+
+    const lines = markdown.split('\n');
+    const state = {
+      inBlockquote: false,
+      inCodeBlock: false,
+      listStack: [],
+      buffer: []
+    };
+
+    lines.forEach( line => {
+      this._routeLine(line, state);
+    });
+
+    this._closeOpenLists(state);
+    const spaceRex = new RegExp(`[ \\t]{${this._spaces + 1}}`, 'g');
+    const html = state.buffer.join('\n');
+    return html.replace(spaceRex, '');
+  }
+
+  /**
+   * Parses and wraps blockquote elements.
+   */
+  /**
+ * Parses and wraps header elements (H1 - H6).
+ */
+_processHeaders(line, state) {
+  const working = line.trim();
+  const match = working.match(AMarkdown.rex.header);
+  if (match) {
+    const level = match[1].length;
+    const content = this._routeInlineElements(match[2]);
+    state.buffer.push(`<h${level} part="h${level}">${content}</h${level}>`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Parses and wraps blockquote elements.
+ */
+_processBlockquotes(line, state) {
+  const working = line.trim();
+  // const match = working.match(AMarkdown.rex.blockquote);
+  const test = AMarkdown.rex.blockquote.test(working);
+  if (!test && !state.inBlockquote) return false;
+
+  if (!test && state.inBlockquote) {
+    state.buffer.push('</blockquote>');
+    state.inBlockquote = false;
+  } else {
+    this._closeOpenLists(state);
+    state.buffer.push('<blockquote part="blockquote">');
+    state.inBlockquote = true;
+  }
+  return true;
+}
+
+
+  /*_processBlockquotes(line, state) {
+    const working = line.trim();
+
+    // supports nested quotes like >> or >>>
+    if (AMarkdown.rex.blockquote.test(working)) {
+      const match = working.match(AMarkdown.rex.blockquote);
+      if (match) {
+        const indentLevel = match[1].length / 4;
+        const content = this._routeInlineElements(match[2]);
+
+        state.buffer.push(`<blockquote part="blockquote">${content}</blockquote>`);
+        return true;
+      }
+    }
+
+    return false;
+  }*/
+
+  /**
+   * Process bold
+   */
+  _processBold(text) {
+    return text
+      .replace(AMarkdown.rex.boldAsterisk, '<strong part="strong">$1</strong>')
+      .replace(AMarkdown.rex.boldUnderscore, '<strong part="strong">$1</strong>');
+  }
+
+  /**
+   * Process checkboxes
+   */
+  _processCheckboxes(text) {
+    const working = text.trim();
+    return working.replace(AMarkdown.rex.checkbox, (match, state, rest) => {
+      const checked = state.toLowerCase() === 'x' ? 'checked ' : '';
+      return `<input type="checkbox" ${checked} disabled part="checkbox ${checked}"> ${this._escapeHTML(rest)}`;
+    });
+  }
+
+  /**
+   * Parses and wraps header elements (H1 - H6).
+   */
+  _processHeaders(line, state) {
+    const working = line.trim();
+    const match = working.match(AMarkdown.rex.header);
+    if (match) {
+      const level = match[1].length;
+      const content = this._routeInlineElements(match[2]);
+      state.buffer.push(`<h${level} part="h${level}">${content}</h${level}>`);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Process images.
+   */
+  _processImages(text) {
+    const match = text.match(AMarkdown.rex.image);
+    return text.replace(AMarkdown.rex.image, (match, alt, url) => {
+      return `<img src="${this._sanitizeURL(url)}" alt="${this._escapeHTML(alt)}" part="img">`;
+    });
+  }
+
+  /**
+   * Process inline code
+   */
+  _processInlineCode(text) {
+    text = this._escapeHTML(text);
+    return text.replace(AMarkdown.rex.inlineCode, '<code part="code">$1</code>');
+  }
+
+  /**
+   * Process italic
+   */
+  _processItalic(text) {
+    return text
+      .replace(AMarkdown.rex.italicAsterisk, '<em part="em">$1</em>')
+      .replace(AMarkdown.rex.italicUnderscore, '<em part="em">$1</em>');
+  }
+
+  /**
+   * Process links.
+   */
+  _processLinks(text) {
+    return text.replace(AMarkdown.rex.link, (match, text, url) => {
+      return `<a href="${this._sanitizeURL(url)}" part="a" target="_blank">${this._escapeHTML(text)}</a>`;
+    });
+  }
+
+  /**
+   * Orchestrates the processing of inline items.
+   * Note: Sequence order matters.
+   */
+  _routeInlineElements(text) {
+    let html = text;
+    html = this._processInlineCode(html);
+    html = this._processCheckboxes(html);
+    html = this._processImages(html);
+    html = this._processLinks(html);
+    html = this._processBold(html);
+    html = this._processItalic(html);
+
+    return html;
+  }
+
+  /**
+   * Routes a single line to the appropriate structural handler.
+   */
+  _routeLine(line, state) {
+    const spaces = line.match(/[ \t]+/);
+    if (spaces && spaces[0].length < this._spaces) this._spaces = spaces[0].length;
+
+    if (this._handleCodeBlock(line, state)) return;
+    if (state.inCodeBlock) {
+      this._addCodeLine(line, state);
+      return;
+    }
+
+    if (this._processBlockquotes(line, state)) {
+      line = line.trim();
+      const test = AMarkdown.rex.blockquote.test(line);
+      if (test) {
+        state.buffer.push(line);
+      } else {
+        state.buffer.push('</blockquote>');
+      }
+      return;
+    }
+
+    if (line.trim() === '') {
+      this._closeOpenLists(state);
+      return;
+    }
+
+    if (this._handleList(line, state)) return;
+
+    //Close lists if a non-list item appears
+    this._closeOpenLists(state);
+
+    if (this._processHeaders(line, state)) return;
+    this._handleParagraphs(line, state);
+  }
+
+  /**
+   * Prevents javascript: and data: URI XSS attacks in links and images.
+   */
+  _sanitizeURL(url) {
+    const sanitized = url.replace(/[\x00-\x1F\x7F]/g, '').trim();
+    // Block unsafe protocols
+    if (/^(javascript|vbscript|data):/i.test(sanitized)) {
+      return '#';
+    }
+
+    // Ensure attributes remain safe
+    return this._escapeHTML(sanitized);
+  }
+
+  /**
    * Opens and closes <ul> / <ol> elements to match indentation depth.
    */
-  syncListStack(state, indent, listType) {
+  _syncListStack(state, indent, listType) {
     const stack = state.listStack;
 
     while (stack.length > 0 && indent < stack[stack.length - 1].indent) {
@@ -391,110 +425,12 @@ export default class AMarkdown extends HTMLElement {
     }
   }
 
-  /**
-   * Empties the list stack when lists end.
-   */
-  closeOpenLists(state) {
-    while (state.listStack.length > 0) {
-      state.buffer.push(`</${state.listStack.pop().type}>`);
-    }
-  }
-
-  /**
-   * Wraps lines of standard text.
-   */
-  handleParagraph(line, state) {
-    const content = this.processInlineElements(line);
-    state.buffer.push(`<p>${content}</p>`);
-  }
-
-  /**
-   * Orchestrates the processing of inline items.
-   * Note: Sequence order matters.
-   */
-  processInlineElements(text) {
-    let html = this.escapeHTML(text);
-
-    html = this.processCheckboxes(html);
-    // Images must precede links to avoid regex collisions
-    html = this.processImages(html);
-    html = this.processLinks(html);
-    html = this.processEscapedTags(html);
-    html = this.processInlineCode(html);
-    html = this.processBold(html);
-    html = this.processItalic(html);
-
-    return html;
-  }
-
-  /**
-   * Process checkboxes
-   */
-  processCheckboxes(text) {
-    const working = text.trim();
-    return working.replace(AMarkdown.rex.checkbox, (match, state, rest) => {
-      const checked = state.toLowerCase() === 'x' ? 'checked ' : '';
-      return `<input type="checkbox" ${checked}disabled part="checkbox ${checked}"> ${rest}`;
-    });
-  }
-
-  processEscapedTags(text) {
-    return text;
-    // const match = text.match(/\\</);
-    // console.log(text)
-    // return text.replace(AMarkdown.rex.escapedTag, "&lt;");
-  }
-
-  /**
-   * Process images
-   */
-  processImages(text) {
-    return text.replace(AMarkdown.rex.image, (match, alt, url) => {
-      return `<img src="${this.sanitizeURL(url)}" alt="${alt}" part="img">`;
-    });
-  }
-
-  /**
-   * Process links
-   */
-  processLinks(text) {
-    return text.replace(AMarkdown.rex.link, (match, text, url) => {
-      // Note: Since Images run first, Image markdown won't accidentally trigger link markdown
-      return `<a href="${this.sanitizeURL(url)}" part="a">${text}</a>`;
-    });
-  }
-
-  /**
-   * Process inline code
-   */
-  processInlineCode(text) {
-    return text.replace(AMarkdown.rex.inlineCode, '<code part="code">$1</code>');
-  }
-
-  /**
-   * Process bold
-   */
-  processBold(text) {
-    return text
-      .replace(AMarkdown.rex.boldAsterisk, '<strong part="strong">$1</strong>')
-      .replace(AMarkdown.rex.boldUnderscore, '<strong part="strong">$1</strong>');
-  }
-
-  /**
-   * Process italic
-   */
-  processItalic(text) {
-    return text
-      .replace(AMarkdown.rex.italicAsterisk, '<em part="em">$1</em>')
-      .replace(AMarkdown.rex.italicUnderscore, '<em part="em">$1</em>');
-  }
-
   // --- Getters / Setters ---
 
-  get file() { return this.#file }
+  get file() { return this._file }
   set file(value) { this.setAttribute('file', value) }
 
-  get highlight() { return this.#highlight }
+  get highlight() { return this._highlight }
   set highlight(value) { this.toggleAttribute('highlight', value != null && value !== false) }
 }
 

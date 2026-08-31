@@ -1,5 +1,5 @@
 /**
- * Javascript syntax definition file for wijit-code web component
+ * Javascript syntax definition file for Highlighter module
  *
  *  @author Holmes Bryant <https://github.com/HolmesBryant>
  *  @license GPL-3.0
@@ -18,8 +18,8 @@ export default {
 				const re = new RegExp('\\b' + item + '\\b');
 				const start = idx + match[0].search(re);
 				const range = new Range();
-				range.setStart (node, start);
-				range.setEnd (node, start + item.length);
+				range.setStart(node, start);
+				range.setEnd(node, start + item.length);
 				ranges.push(range);
 			}
 		}
