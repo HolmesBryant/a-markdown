@@ -13,7 +13,7 @@ blockquote {
   border-left: var(--blockquote-border);
   padding-left: var(--block-pad);
   tab-size: var(--block-tab-size);
-  text-wrap: wrap;
+  white-space: pre-wrap;
 }
 
 code {

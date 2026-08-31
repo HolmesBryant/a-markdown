@@ -79,9 +79,13 @@ export default class Highlighter {
 
     this.#style = this.#createStyles();
 
-    // Attach styles to the component's shadow root to avoid global pollution
-    const shadow = element.shadowRoot || element.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [...shadow.adoptedStyleSheets, this.#style];
+    // Attach styles to `element` shadow root to avoid global pollution
+    try {
+      const shadow = element.shadowRoot || element.attachShadow({ mode: 'open' });
+      shadow.adoptedStyleSheets = [...shadow.adoptedStyleSheets, this.#style];
+    } catch (error) {
+      throw new Error(`The element passed to the Highlighter constructor must be able to have a shadow DOM. The element given (${element.localName}) cannot have one.`, { cause: error });
+    }
   }
 
   // --- Public Methods ---
@@ -250,15 +254,15 @@ export default class Highlighter {
    * @returns {Promise<Object>} The syntax definition object.
    */
   async #getSyntaxDefs(syntax) {
-    if (!syntax || syntax === 'html') return this.#defaultSyntaxDefs;
-
-    if (typeof syntax === "object") {
-        syntaxCache.set("custom", syntax);
-        return syntax;
-    }
+    if (!syntax) return this.#defaultSyntaxDefs;
 
     if (syntaxCache.has(syntax)) {
       return syntaxCache.get(syntax);
+    }
+
+    if (typeof syntax === "object") {
+      syntaxCache.set("custom", syntax);
+      return syntax;
     }
 
     let url = syntax;

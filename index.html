@@ -54,13 +54,16 @@
 				</div>
 
 				<div class="flex">
-					<input type="checkbox" id="demo-highlight">
+					<a-bind prop="highlight" elem-prop="checked">
+						<input type="checkbox" id="demo-highlight">
+					</a-bind>
 					<label for="demo-highlight">highlight</label>
 				</div>
 			</a-menu>
 		</a-bindgroup>
 
 		<a-markdown
+			highlight
 			id="demo"
 			class="card flex1">
 			# Header 1
@@ -113,9 +116,6 @@
 
 			> Some multi-line
 			> blockquote text
-
-			> A blockquote
-			>> with a nested blockquote
 
 			`<p>Inline code</p>`
 
