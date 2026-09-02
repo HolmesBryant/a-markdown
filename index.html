@@ -13,8 +13,9 @@
 	<script type="module" src="extra/a-code.min.js"></script>
 
 	<link rel="stylesheet" href="extra/styles.css">
-	<link rel="stylesheet" href="dist/a-markdown.css">
 	<link rel="stylesheet" href="extra/a-menu.css">
+	<link rel="stylesheet" href="extra/a-code.css">
+	<link rel="stylesheet" href="dist/a-markdown.css">
 </head>
 <body>
 	<header>
@@ -25,16 +26,17 @@
 
 		<details id="readme">
 			<summary>README</summary>
-			<!-- <a-markdown file="README.md"></a-markdown> -->
+			<a-markdown safe highlight file="README.md"></a-markdown>
 		</details>
 	</header>
 
-	<section class="flex top nowrap">
+	<!-- Demo -->
+	<section class="flex stretch nowrap">
 		<a-bindgroup model="dom:#demo">
 			<a-menu
 				open
 				show-icon=""
-				class="card flex240">
+				class="card">
 				<strong slot="label">Attributes</strong>
 
 				<div class="flex column">
@@ -47,126 +49,731 @@
 							<option>exampleB.md</option>
 						</select>
 					</a-bind>
-
-					<a-bind prop="file">
-						<output>...</output>
-					</a-bind>
 				</div>
 
-				<div class="flex">
+				<div class="flex space-between">
 					<a-bind prop="highlight" elem-prop="checked">
 						<input type="checkbox" id="demo-highlight">
 					</a-bind>
 					<label for="demo-highlight">highlight</label>
+				</div>
+
+				<div class="flex space-between">
+					<a-bind prop="safe" elem-prop="checked">
+						<input type="checkbox" id="demo-safe">
+					</a-bind>
+					<label for="demo-safe">safe</label>
 				</div>
 			</a-menu>
 		</a-bindgroup>
 
 		<a-markdown
 			highlight
+			file="exampleB.md"
 			id="demo"
 			class="card flex1">
-			# Header 1
-			## Header 2
-			### Header 3
-			#### Header 4
-			##### Header 5
-			###### Header 6
+			# Inline Markdown
 
-			**Bold Text (double asterix)**
-
-			__Bold Text (double underscore)__
-
-			*Italic Text (asterix)*
-
-			_Italic Text (underscore)_
-
-			- List Item (Dash)
-			- List Item (Dash)
-				- Sub Item
-				- Sub Item
-			- List item (Dash)
-
-			* List Item (Asterix)
-			* List Item (Asterix)
-				* Sub Item
-				* Sub Item
-			* List Item (Asterix)
-
-			+ List Item (Plus)
-			+ List Item (Plus)
-				+ Sub Item
-				+ Sub Item
-			+ List Item (Plus)
-
-			1. Ordered List Item
-			2. Ordered List Item
-				1. Sub Item
-				2. Sub Item
-			3. Ordered List Item
-
-			[A Link](exampleA.md)
-
-			![alt text](extra/pic.png)
-
-			[] checkbox
-			[x] checkbox checked
-
-			> A blockquote. Exercitation incididunt id aliqua aute occaecat sed non qui eiusmod in culpa dolore exercitation aliquip do ullamco esse ullamco pariatur laboris sed.
-
-			> Some multi-line
-			> blockquote text
-
-			`<p>Inline code</p>`
-
-			```html
-				<!-- some html -->
-				<div>A div</div>
-			```
-
-			```javascript
-			// some javascript
-			function foo() {
-				return 'foo';
-			}
-			```
-
-			```
-			/* Some CSS */
-			div {
-				border: 1px solid black;
-				padding: 1rem;
-			}
-			```
-
-			```python
-			# Some python
-			#!/usr/bin/env python3
-
-			def get_item_cost(name):
-				costs = {"sword": 50, "potion": 10}
-				if name in costs: return costs[name]
-				else: return 0
-
-			result = get_item_cost("sword")
-			print(result)
-			```
-
-			```php
-			// Some php
-			function calculateDamage($type, $level) {
-				if ($type === 'fire') { return $level * 2; }
-				elseif ($type === 'ice') { return $level * 3; }
-				else { return $level; }
-			}
-
-			echo calculateDamage('fire', 5);
-			```
+			This markdown text is written directly between the `a-markdown` tags.
 		</a-markdown>
 	</section>
 
 	<h2>Examples</h2>
+
 	<section>
+		<details name="examples">
+		<summary>General Syntax</summary>
+			<div class="flex stretch nofrills">
+				<strong class="flex1 flex center">Rendered</strong>
+				<strong class="flex1 flex center">Markdown</strong>
+				<strong class="flex1 flex center">HTML</strong>
+			</div>
+
+			<div>
+			<strong>Headers</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						# Header 1
+						## Header 2
+						### Header 3
+
+						etc...
+					</a-markdown>
+
+					<a-code class="card flex1">
+						<textarea>
+							# Header 1
+							## Header 2
+							### Header 3
+
+							etc...
+						</textarea>
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<h1>Header 1</h1>
+							<h2>Header 2</h2>
+							<h3>Header 3</h3>
+							<p>etc...</p>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Bold Text</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						**Bold Text (double asterix)**
+
+						__Bold Text (double underscore)__
+					</a-markdown>
+
+					<a-code class="card flex1">
+						**Bold Text**
+
+						__Bold Text__
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<strong>
+							Bold Text
+						</strong>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Italic Text</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						*Italic Text (asterix)*
+
+						_Italic Text (underscore)_
+					</a-markdown>
+
+					<a-code class="card flex1">
+						*Italic Text*
+
+						_Italic Text_
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<em>
+							italic Text
+						</em>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Unordered List</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						- List item (-)
+						* List item (*)
+						+ List item (+)
+					</a-markdown>
+
+					<a-code class="card flex1">
+						- List item
+						* List item
+						+ List item
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<ul>
+							<li>List item</li>
+							<li>List item</li>
+							<li>List item</li>
+						</ul>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Ordered List</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						1. List item
+						1. List item
+						1. List item
+					</a-markdown>
+
+					<a-code class="card flex1">
+						1. List item
+						1. List item
+						1. List item
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<ol>
+							<li>List item</li>
+							<li>List item</li>
+							<li>List item</li>
+						</ol>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Links</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						[A Link](exampleA.md)
+					</a-markdown>
+
+					<a-code class="card flex1">
+						[A Link](exampleA.md)
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<a
+								href="exampleA.md"
+								target="_blank">
+								A Link
+							</a>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Images</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						![alt text](extra/pic.png)
+					</a-markdown>
+
+					<a-code class="card flex1">
+						![alt text](pic.png)
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<img
+								src="pic.png"
+								alt="alt text">
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Checkboxes</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						[] checkbox
+						[x] checked
+					</a-markdown>
+
+					<a-code class="card flex1">
+						[] checkbox
+						[x] checked
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<input
+								disabled
+								type="checkbox">
+
+							<input
+								disabled
+								checked
+								type="checkbox">
+							</textarea>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Blockquotes</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						> A blockquote
+
+						> Some multi-line
+						> blockquote text
+					</a-markdown>
+
+					<a-code class="card flex1">
+						> A blockquote
+
+						> Some multi-line
+						> blockquote text
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<blockquote>
+								A blockquote
+							</blockquote>
+
+							<blockquote>
+								Some multi-line\n
+								blockquote text
+							</blockquote>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Inline Code</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						`Some inline code`
+					</a-markdown>
+
+					<a-code class="card flex1">
+						`Some inline code`
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<code>
+								Some inline code
+							</code>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<strong>Horizontal Rules</strong>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						---
+						___
+						***
+					</a-markdown>
+
+					<a-code class="card flex1">
+						---
+						___
+						***
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<hr>
+							<hr>
+							<hr>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+		</details>
+
+		<details name="examples">
+		<summary>Code Blocks</summary>
+
+			<div class="flex stretch nofrills">
+				<strong class="flex1 flex center">Rendered</strong>
+				<strong class="flex1 flex center">Markdown</strong>
+				<strong class="flex1 flex center">HTML</strong>
+			</div>
+
+			<div>
+				<strong>HTML</strong>
+
+				<!-- html -->
+				<div class="flex stretch">
+					<a-markdown safe highlight class="card flex1">
+						```
+						<!-- html -->
+						<div>A div</div>
+						```
+					</a-markdown>
+
+					<div class="card flex1 flex column">
+						&lt;a-markdown safe>
+						<a-code>
+							<textarea>
+									```
+									<!-- html -->
+									<div>A div</div>
+									```
+							</textarea>
+						</a-code>
+					</div>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									part="pre code ">
+									&lt;!-- html --&gt;
+									&lt;div&gt;A div&lt;/div&gt;
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<strong>CSS</strong>
+
+				<!-- css -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```
+						/* CSS */
+						div {
+							padding: 1rem;
+						}
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```
+						/* CSS */
+						div {
+							padding: 1rem;
+						}
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									part="pre code">
+									/* CSS */
+									div {
+										padding: 1rem;
+									}
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<strong>javascript</strong>
+
+				<!-- javascript -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```javascript
+						// javascript
+						function foo() {
+							return 'foo';
+						}
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```javascript
+						// javascript
+						function foo() {
+							return 'foo';
+						}
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									class="lang-javascript"
+									part="pre code lang-javascript">
+									....
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<strong>php</strong>
+
+				<!-- php -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```php
+						// php
+						function damage($type, $level) {
+							if ($type === 'fire') {
+								return $level * 2;
+							} elseif ($type === 'ice') {
+								return $level * 3;
+							} else {
+								return $level;
+							}
+						}
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```php
+						// php
+						function damage($type, $level) {
+							if ($type === 'fire') {
+								return $level * 2;
+							} elseif ($type === 'ice') {
+								return $level * 3;
+							} else {
+								return $level;
+							}
+						}
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									class="lang-php"
+									part="pre code lang-php">
+										....
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<strong>python</strong>
+
+				<!-- python -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```python
+						# python
+						#!/usr/bin/env python3
+
+						def item_cost(name):
+							costs = {"sword": 50, "potion": 10}
+							if name in costs: return costs[name]
+							else: return 0
+
+						result = item_cost("sword")
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```python
+						# python
+						#!/usr/bin/env python3
+
+						def item_cost(name):
+							costs = {"sword": 50, "potion": 10}
+							if name in costs: return costs[name]
+							else: return 0
+
+						result = item_cost("sword")
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									class="lang-python"
+									part="pre code lang-python">
+									....
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+		</details>
+
+		<details name="examples">
+		<summary>HTML Entities</summary>
+
+			<div class="flex stretch nofrills">
+				<strong class="flex1 flex center">Rendered</strong>
+				<strong class="flex1 flex center">Markdown</strong>
+				<strong class="flex1 flex center">HTML</strong>
+			</div>
+
+			<!-- copyright -->
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&copy;) Copyright
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;copy;) Copyright
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(©) Copyright</p>
+				</a-code>
+			</div>
+
+			<!-- ampersand -->
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&amp;) Ampersand
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;) Ampersand
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(&) Ampersand</p>
+				</a-code>
+			</div>
+
+			<!-- less than -->
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+						(&lt;) Less Than
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;lt;) Less Than
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(<) Less Than</p>
+				</a-code>
+			</div>
+
+			<!-- greater than -->
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&gt;) Greater Than
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;gt;) Greater Than
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(>) Greater Than</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&grave;) Backtick
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;grave;) Backtick
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(`) Backtick</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&quot;) Quotation Marks
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;quot;) Quotation Marks
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(") Quotation Marks</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&apos;) Apostrophe
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;apos;) Apostrophe
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(') Apostrophe</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&hellip;) Ellipsis
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;hellip;) Ellipsis
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(…) Ellipsis</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&mdash;) Em Dash
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;mdash;) Em Dash
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(—) Em Dash</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&ndash;) En Dash
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;ndash;) En Dash
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(–) En Dash</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&nbsp;) Non-breaking Space
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					<textarea>
+						(&amp;nbsp;) Non-breaking Space
+					</textarea>
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(&nbsp;) Non-breaking Space</p>
+				</a-code>
+			</div>
+		</details>
 	</section>
 </body>
 </html>

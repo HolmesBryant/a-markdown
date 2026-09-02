@@ -12,7 +12,7 @@ const abindUpdate = Symbol.for('abind.update');
 
 /**
  * A custom element that converts Markdown syntax to HTML.
- * Supports headers, bold, italic, lists (ul, ol), inline code, code blocks, links, images, blockquotes and checkboxes.
+ * Supports headers, bold, italic, lists (ul, ol), inline code, code blocks, links, images, blockquotes, horizontal rules and checkboxes.
  * @class AMarkdown
  * @extends HTMLElement
  */
@@ -33,6 +33,8 @@ export default class AMarkdown extends HTMLElement {
    * @private
    */
   #highlight = false;
+
+  #safe = false;
 
   // -- Properties ---
 
@@ -65,6 +67,13 @@ export default class AMarkdown extends HTMLElement {
   #highlighters = [];
 
   /**
+   * The most current markdown content
+   * @type {string}
+   * @private
+   */
+  #markdown = '';
+
+  /**
    * Reference to the slot element within shadow DOM.
    * @type {HTMLSlotElement|null}
    * @private
@@ -80,7 +89,8 @@ export default class AMarkdown extends HTMLElement {
 
   static observedAttributes = [
     'file',
-    'highlight'
+    'highlight',
+    'safe'
   ]
 
   /**
@@ -89,12 +99,12 @@ export default class AMarkdown extends HTMLElement {
    */
   static rex = {
     blockquote: /^((?:>|&gt;)+)\s+(.*)/,
-    boldAsterisk: /\*\*([^*]+)\*\*/g,
-    boldUnderscore: /__([^_]+)__/g,
+    boldAsterisk: /\*{2}([^*]+)\*{2}/g,
+    boldUnderscore: /__([^*]+)__/g,
     checkbox: /^\[([ xX]?)\]\s+(.*)$/,
     codeBlock: /^```([a-z0-9-]*)$/i,
-    escapedTag: /\\</g,
     header: /^(#{1,6})\s+(.*)$/,
+    horizontalRule: /^(\r?\n|^)([*_-]{3,})(\r?\n|$)/,
     image: /!\[([^\]]*)\]\(([^)]+)\)/g,
     inlineCode: /`([^`]+)`/g,
     italicAsterisk: /\*([^*]+)\*/g,
@@ -144,6 +154,11 @@ export default class AMarkdown extends HTMLElement {
         }
       }
       break;
+
+    case 'safe':
+      this.#safe = this.hasAttribute('safe');
+      if (this.#connected) this.render(this.#markdown);
+      break;
     }
 
     /**
@@ -156,8 +171,8 @@ export default class AMarkdown extends HTMLElement {
     this.#abortController = new AbortController();
 
     this.#slot.addEventListener('slotchange', event => {
-      this.#container.innerHTML = this.parse(this.innerHTML);
-      if (this.#highlight) this.#highlightCode();
+      this.#markdown = this.innerHTML;
+      this.render(this.innerHTML);
     }, { signal: this.#abortController.signal });
 
     if (this.#file) this.#fetchFile(this.#file);
@@ -199,6 +214,16 @@ export default class AMarkdown extends HTMLElement {
     const spaceRex = new RegExp(`[ \\t]{${this.#spaces + 1}}`, 'g');
     const html = state.buffer.join('\n');
     return html.replace(spaceRex, '');
+  }
+
+  /**
+   * Renders the parsed markdown into this.#container
+   *
+   * @param {string} markdown - The Markdown to render.
+   */
+  render(markdown) {
+    this.#container.innerHTML = this.parse(markdown);
+    if (this.#highlight) this.#highlightCode();
   }
 
   // --- Private Methods ---
@@ -245,7 +270,7 @@ export default class AMarkdown extends HTMLElement {
    * @returns {string} The escaped HTML string.
    */
   #escapeHTML(text) {
-    // if (this._escaped) return text;
+    if (!this.#safe) return text;
     const map = {
       '&': '&amp;',
       '<': '&lt;',
@@ -285,8 +310,10 @@ export default class AMarkdown extends HTMLElement {
     }
 
     this.#destroyHighlights();
-    this.#container.innerHTML = this.parse(content);
-    if (this.#highlight) this.#highlightCode();
+    this.#markdown = content;
+    this.render(content);
+    // this.#container.innerHTML = this.parse(content);
+    // if (this.#highlight) this.#highlightCode();
   }
 
   /**
@@ -354,7 +381,7 @@ export default class AMarkdown extends HTMLElement {
 
     this.#syncListStack(state, indent, listType);
 
-    const parsedContent = this.#routeInlineElements(content);
+    const parsedContent = this.#routeInlineElements(content, state);
     state.buffer.push(`<li part="li ${listType}-li">${parsedContent}</li>`);
     return true;
   }
@@ -367,7 +394,7 @@ export default class AMarkdown extends HTMLElement {
    * @returns {void}
    */
   #handleParagraphs(line, state) {
-    const content = this.#routeInlineElements(line);
+    const content = this.#routeInlineElements(line, state);
     state.buffer.push(`<p>${content}</p>`);
   }
 
@@ -443,10 +470,21 @@ export default class AMarkdown extends HTMLElement {
     const match = working.match(AMarkdown.rex.header);
     if (match) {
       const level = match[1].length;
-      const content = this.#routeInlineElements(match[2]);
+      const content = this.#routeInlineElements(match[2], state);
       state.buffer.push(`<h${level} part="h${level}">${content}</h${level}>`);
       return true;
     }
+    return false;
+  }
+
+  #processHorizontalRule(line, state) {
+    line = line.trim();
+    const match = line.match(AMarkdown.rex.horizontalRule);
+    if (match) {
+      state.buffer.push(line.replace(AMarkdown.rex.horizontalRule, '<hr>'));
+      return true;
+    }
+
     return false;
   }
 
@@ -456,7 +494,7 @@ export default class AMarkdown extends HTMLElement {
    * @returns {string} - The processed text
    */
   #processImages(line) {
-    const match = line.match(AMarkdown.rex.image);
+    if (line.includes('<code')) return line;
     return line.replace(AMarkdown.rex.image, (match, alt, url) => {
       return `<img src="${this.#sanitizeURL(url)}" alt="${this.#escapeHTML(alt)}" part="img">`;
     });
@@ -489,6 +527,7 @@ export default class AMarkdown extends HTMLElement {
    * @returns {string} - The processed text
    */
   #processLinks(line) {
+    if (line.includes('<code')) return line;
     return line.replace(AMarkdown.rex.link, (match, line, url) => {
       return `<a href="${this.#sanitizeURL(url)}" part="a" target="_blank">${this.#escapeHTML(line)}</a>`;
     });
@@ -501,15 +540,15 @@ export default class AMarkdown extends HTMLElement {
    * @param {string} line - The current line being processed.
    * @returns {string} - The processed text
    */
-  #routeInlineElements(line) {
+  #routeInlineElements(line, state) {
+    if (state.inCodeBlock) return line;
     let html = line;
     html = this.#processInlineCode(html);
-    html = this.#processCheckboxes(html);
-    html = this.#processImages(html);
-    html = this.#processLinks(html);
+    html = this.#processCheckboxes(html, state);
+    html = this.#processImages(html, state);
+    html = this.#processLinks(html, state);
     html = this.#processBold(html);
     html = this.#processItalic(html);
-
     return html;
   }
 
@@ -542,6 +581,7 @@ export default class AMarkdown extends HTMLElement {
     this.#closeOpenLists(state);
 
     if (this.#processHeaders(line, state)) return;
+    if (this.#processHorizontalRule(line, state)) return;
     this.#handleParagraphs(line, state);
   }
 
@@ -593,6 +633,11 @@ export default class AMarkdown extends HTMLElement {
 
   get highlight() { return this.#highlight }
   set highlight(value) { this.toggleAttribute('highlight', value != null && value !== false) }
+
+  get safe() { return this.#safe }
+  set safe(value) {
+    this.toggleAttribute('safe', value != null && value !== false);
+  }
 }
 
 if (!customElements.get('a-markdown')) customElements.define('a-markdown', AMarkdown);

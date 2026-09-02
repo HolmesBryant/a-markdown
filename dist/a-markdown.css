@@ -1,13 +1,13 @@
 /* @version 2 */
 a-markdown {
-	color-scheme: light dark;
-
 	--border-color: silver;
 	--code-background: gainsboro;
 	--checkbox-background: white;
   --block-pad: .5rem;
   --list-indent: 1.5rem;
   --block-indent: 2;
+
+	color-scheme: light dark;
 }
 
 
@@ -24,7 +24,9 @@ a-markdown {
 }
 
 /* container that holds all the converted html */
-a-markdown::part(html) {}
+a-markdown::part(html) {
+	padding: 1rem;
+}
 
 /* headers */
 a-markdown::part(h1) {}
@@ -56,16 +58,17 @@ This works with any suffix.
 a-markdown::part(code) { background: var(--code-background); }
 a-markdown::part(pre) { border-radius: .5rem; }
 a-markdown::part(pre code) {}
-a-markdown::part(lang-javascript) {}
 a-markdown::part(lang-html) {}
-a-markdown::part(lang-css) {}
+a-markdown::part(lang-javascript) {}
+a-markdown::part(lang-php) {}
+a-markdown::part(lang-python) {}
 
 /* link */
 a-markdown::part(a) {}
 
 /* image */
 a-markdown::part(img) {
-	max-height: 200px;
+	max-height: 150px;
 }
 
 /* checkboxes */

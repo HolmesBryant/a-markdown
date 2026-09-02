@@ -5,6 +5,11 @@
  * @version 2.0
  */
 
+import HTML from './syntax.html.js';
+import JAVASCRIPT from './syntax.javascript.js';
+import PHP from './syntax.php.js';
+import PYTHON from './syntax.python.js';
+
 /**
  * Caches syntax definitions.
  * @type {Map<string, Object>}
@@ -264,6 +269,26 @@ export default class Highlighter {
       syntaxCache.set("custom", syntax);
       return syntax;
     }
+
+    let def;
+
+    switch (syntax) {
+      case 'html':
+        def = HTML;
+        break;
+      case 'javascript':
+      case 'js':
+        def = JAVASCRIPT;
+        break;
+      case 'php':
+        def = PHP;
+        break;
+      case 'python':
+        def = PYTHON;
+        break;
+    }
+
+    if (def) return def;
 
     let url = syntax;
     if (!/^(http|\.|\/)/.test(syntax)) url = `./syntax.${syntax}.js`;
