@@ -7,6 +7,13 @@
 ##### Header 5
 ###### Header 6
 
+<script>alert('FOO!')</script>
+
+> A single line blockquote
+
+> Some multi-line
+> blockquote text
+
 **Bold Text (double asterix)**
 
 __Bold Text (double underscore)__

@@ -5,41 +5,48 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>a-markdown Web Component</title>
 
-	<script type="module" src="src/a-markdown.js"></script>
-	<!-- <script type="module" src="dist/a-markdown.min.js"></script> -->
+	<!-- <script type="module" src="src/a-markdown.js"></script> -->
+	<script type="module" src="dist/a-markdown.min.js"></script>
 
 	<script type="module" src="extra/a-menu.min.js"></script>
 	<script type="module" src="extra/a-bind.min.js"></script>
+	<script type="module" src="extra/a-color.min.js"></script>
 	<script type="module" src="extra/a-code.min.js"></script>
 
 	<link rel="stylesheet" href="extra/styles.css">
 	<link rel="stylesheet" href="extra/a-menu.css">
+	<link rel="stylesheet" href="extra/a-color.css">
 	<link rel="stylesheet" href="extra/a-code.css">
 	<link rel="stylesheet" href="dist/a-markdown.css">
 </head>
 <body>
 	<header>
 		<h1>a-markdown Web Component</h1>
-		<p> A custom element that renders Markdown syntax as HTML</p>
+		<p> A custom element that renders a subset of Markdown syntax as HTML</p>
 
-		<p><a href="tests/index.html" target="_blank">Tests</a></p>
+		<p>
+			<a href="tests/index.html" target="_blank">Tests</a>
+		</p>
 
 		<details id="readme">
 			<summary>README</summary>
-			<a-markdown safe highlight file="README.md"></a-markdown>
+			<a-markdown highlight file="README.md"></a-markdown>
 		</details>
 	</header>
 
 	<!-- Demo -->
+	<h2>Demo</h2>
+
 	<section class="flex stretch nowrap">
 		<a-bindgroup model="dom:#demo">
+			<!-- attributes -->
 			<a-menu
 				open
 				show-icon=""
 				class="card">
 				<strong slot="label">Attributes</strong>
 
-				<div class="flex column">
+				<div class="flex column start">
 					<label for="demo-file">file</label>
 
 					<a-bind prop="file">
@@ -51,37 +58,123 @@
 					</a-bind>
 				</div>
 
-				<div class="flex space-between">
+				<div class="flex start">
 					<a-bind prop="highlight" elem-prop="checked">
 						<input type="checkbox" id="demo-highlight">
 					</a-bind>
 					<label for="demo-highlight">highlight</label>
 				</div>
 
-				<div class="flex space-between">
-					<a-bind prop="safe" elem-prop="checked">
-						<input type="checkbox" id="demo-safe">
+				<div class="flex column start">
+					<label for="demo-palette">palette</label>
+
+					<a-bind prop="palette">
+						<select id="demo-palette">
+							<option>default</option>
+							<option>keyword:pink, tag:lime</option>
+							<option>custom-palette.json</option>
+						</select>
 					</a-bind>
-					<label for="demo-safe">safe</label>
+				</div>
+			</a-menu>
+
+			<a-menu
+				open
+				show-icon=""
+				class="card"
+				style="font-size:smaller">
+				<strong slot="label">Theme</strong>
+
+				<div class="flex start">
+					<a-bind prop="--code-background">
+						<a-color id="theme-code-background">
+						</a-color>
+					</a-bind>
+
+					<label for="theme-code-background">
+						--code-background
+					</label>
+				</div>
+
+				<div class="flex start">
+					<a-bind prop="--text-color">
+						<a-color id="theme-text-color">
+						</a-color>
+					</a-bind>
+
+					<label for="theme-text-color">
+					  --text-color
+					</label>
+				</div>
+
+				<div class="flex column start">
+					<label for="theme-block-pad">
+						--blockquote-pad
+					</label>
+
+					<a-bind prop="--blockquote-pad">
+						<input id="theme-block-pad">
+					</a-bind>
+				</div>
+
+				<div class="flex column start">
+					<label for="theme-block-tab-size">
+						--block-tab-size
+					</label>
+
+					<a-bind prop="--block-tab-size">
+						<input id="theme-block-tab-size">
+					</a-bind>
+				</div>
+
+				<div class="flex column start">
+					<label for="theme-list-indent">
+						--list-indent
+					</label>
+
+					<a-bind prop="--list-indent">
+						<input id="theme-list-indent">
+					</a-bind>
 				</div>
 			</a-menu>
 		</a-bindgroup>
 
 		<a-markdown
 			highlight
-			file="exampleB.md"
 			id="demo"
 			class="card flex1">
-			# Inline Markdown
+			<textarea>
+				# Inline Markdown
 
-			This markdown text is written directly between the `a-markdown` tags.
+				This markdown text is nested inside a textarea (which is a child of `<a-markdown>`) to prevent the script from running.
+
+				`<script>alert('FOO!')</script>`
+
+				```html
+				<a-markdown>
+					&lt;textarea>
+						&lt;script>alert('FOO!')</script>
+					&lt;/textarea>
+				</a-markdown>
+				```
+
+				> If your Markdown comes from an untrusted source or contains potentially dangerous code, or HTML tags you do not want the browser to process/execute, wrap the whole Markdown string inside a &lt;textarea>.
+
+				---
+
+				* List Item
+				* List Item
+					* Sub-Item
+					** Sub-sub Item
+				* List Item
+			</textarea>
 		</a-markdown>
 	</section>
 
 	<h2>Examples</h2>
 
 	<section>
-		<details name="examples">
+		<details>
 		<summary>General Syntax</summary>
 			<div class="flex stretch nofrills">
 				<strong class="flex1 flex center">Rendered</strong>
@@ -90,7 +183,7 @@
 			</div>
 
 			<div>
-			<strong>Headers</strong>
+			<h4>Headers</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						# Header 1
@@ -122,7 +215,7 @@
 			</div>
 
 			<div>
-			<strong>Bold Text</strong>
+			<h4>Bold Text</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						**Bold Text (double asterix)**
@@ -145,18 +238,17 @@
 			</div>
 
 			<div>
-			<strong>Italic Text</strong>
+			<h4>Italic Text</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						*Italic Text (asterix)*
-
 						_Italic Text (underscore)_
 					</a-markdown>
 
 					<a-code class="card flex1">
-						*Italic Text*
+						&nbsp;*Italic Text*
 
-						_Italic Text_
+						&nbsp;_Italic Text_
 					</a-code>
 
 					<a-code highlight class="card flex1">
@@ -168,7 +260,7 @@
 			</div>
 
 			<div>
-			<strong>Unordered List</strong>
+			<h4>Unordered List</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						- List item (-)
@@ -193,7 +285,7 @@
 			</div>
 
 			<div>
-			<strong>Ordered List</strong>
+			<h4>Ordered List</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						1. List item
@@ -218,7 +310,7 @@
 			</div>
 
 			<div>
-			<strong>Links</strong>
+			<h4>Links</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						[A Link](exampleA.md)
@@ -241,7 +333,7 @@
 			</div>
 
 			<div>
-			<strong>Images</strong>
+			<h4>Images</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						![alt text](extra/pic.png)
@@ -262,7 +354,7 @@
 			</div>
 
 			<div>
-			<strong>Checkboxes</strong>
+			<h4>Checkboxes</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						[] checkbox
@@ -290,7 +382,7 @@
 			</div>
 
 			<div>
-			<strong>Blockquotes</strong>
+			<h4>Blockquotes</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						> A blockquote
@@ -322,7 +414,7 @@
 			</div>
 
 			<div>
-			<strong>Inline Code</strong>
+			<h4>Inline Code</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						`Some inline code`
@@ -343,7 +435,7 @@
 			</div>
 
 			<div>
-			<strong>Horizontal Rules</strong>
+			<h4>Horizontal Rules</h4>
 				<div class="flex stretch">
 					<a-markdown class="card flex1">
 						---
@@ -368,7 +460,7 @@
 			</div>
 		</details>
 
-		<details name="examples">
+		<details>
 		<summary>Code Blocks</summary>
 
 			<div class="flex stretch nofrills">
@@ -378,44 +470,64 @@
 			</div>
 
 			<div>
-				<strong>HTML</strong>
+				<h4>Inline</h4>
+
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						`<div>Inline</div>`
+					</a-markdown>
+
+					<a-code class="card flex1">
+						<textarea>
+							`<div>Inline</div>`
+						</textarea>
+					</a-code>
+
+					<a-code highlight class="card flex1">
+							<code
+								part="code">
+								&amp;lt;div&ampgt; Inline &amp;lt;div&amp;gt;
+							</code>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+				<h4>HTML</h4>
 
 				<!-- html -->
 				<div class="flex stretch">
-					<a-markdown safe highlight class="card flex1">
+					<a-markdown highlight class="card flex1">
 						```
 						<!-- html -->
 						<div>A div</div>
 						```
 					</a-markdown>
 
-					<div class="card flex1 flex column">
-						&lt;a-markdown safe>
-						<a-code>
-							<textarea>
-									```
-									<!-- html -->
-									<div>A div</div>
-									```
-							</textarea>
-						</a-code>
-					</div>
+					<a-code class="card flex1">
+						<textarea>
+								```
+								<!-- html -->
+								<div>A div</div>
+								```
+						</textarea>
+					</a-code>
 
 					<a-code highlight class="card flex1">
 						<textarea>
 							<pre
 								part="pre">
 								<code
-									part="pre code ">
-									&lt;!-- html --&gt;
-									&lt;div&gt;A div&lt;/div&gt;
+									part="pre code">
+									&amp;lt;!-- html --&amp;gt;
+									&amp;lt;div&amp;gt;A div&amp;lt;/div&amp;gt;
 								</code>
 							</pre>
 						</textarea>
 					</a-code>
 				</div>
 
-				<strong>CSS</strong>
+				<h4>CSS</h4>
 
 				<!-- css -->
 				<div class="flex stretch">
@@ -453,7 +565,7 @@
 					</a-code>
 				</div>
 
-				<strong>javascript</strong>
+				<h4>javascript</h4>
 
 				<!-- javascript -->
 				<div class="flex stretch">
@@ -480,7 +592,6 @@
 							<pre
 								part="pre">
 								<code
-									class="lang-javascript"
 									part="pre code lang-javascript">
 									....
 								</code>
@@ -489,7 +600,7 @@
 					</a-code>
 				</div>
 
-				<strong>php</strong>
+				<h4>php</h4>
 
 				<!-- php -->
 				<div class="flex stretch">
@@ -528,7 +639,6 @@
 							<pre
 								part="pre">
 								<code
-									class="lang-php"
 									part="pre code lang-php">
 										....
 								</code>
@@ -537,7 +647,7 @@
 					</a-code>
 				</div>
 
-				<strong>python</strong>
+				<h4>python</h4>
 
 				<!-- python -->
 				<div class="flex stretch">
@@ -574,7 +684,6 @@
 							<pre
 								part="pre">
 								<code
-									class="lang-python"
 									part="pre code lang-python">
 									....
 								</code>
@@ -585,7 +694,7 @@
 			</div>
 		</details>
 
-		<details name="examples">
+		<!-- <details>
 		<summary>HTML Entities</summary>
 
 			<div class="flex stretch nofrills">
@@ -594,16 +703,13 @@
 				<strong class="flex1 flex center">HTML</strong>
 			</div>
 
-			<!-- copyright -->
 			<div class="flex stretch">
 				<a-markdown class="card flex1">
 					(&copy;) Copyright
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;copy;) Copyright
-					</textarea>
+					(&amp;copy;) Copyright
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -611,16 +717,13 @@
 				</a-code>
 			</div>
 
-			<!-- ampersand -->
 			<div class="flex stretch">
 				<a-markdown class="card flex1">
 					(&amp;) Ampersand
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;) Ampersand
-					</textarea>
+					(&amp;amp;) Ampersand
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -628,16 +731,13 @@
 				</a-code>
 			</div>
 
-			<!-- less than -->
 			<div class="flex stretch">
 				<a-markdown class="card flex1">
 						(&lt;) Less Than
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;lt;) Less Than
-					</textarea>
+					(&amp;lt;) Less Than
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -645,16 +745,13 @@
 				</a-code>
 			</div>
 
-			<!-- greater than -->
 			<div class="flex stretch">
 				<a-markdown class="card flex1">
 					(&gt;) Greater Than
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;gt;) Greater Than
-					</textarea>
+					(&amp;gt;) Greater Than
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -668,9 +765,7 @@
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;grave;) Backtick
-					</textarea>
+					(&amp;grave;) Backtick
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -680,17 +775,15 @@
 
 			<div class="flex stretch">
 				<a-markdown class="card flex1">
-					(&quot;) Quotation Marks
+					(&quot;) Quotation Mark
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;quot;) Quotation Marks
-					</textarea>
+					(&amp;quot;) Quotation Mark
 				</a-code>
 
 				<a-code highlight class="card flex1">
-					<p>(") Quotation Marks</p>
+					<p>(") Quotation Mark</p>
 				</a-code>
 			</div>
 
@@ -700,9 +793,7 @@
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;apos;) Apostrophe
-					</textarea>
+					(&amp;apos;) Apostrophe
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -716,9 +807,7 @@
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;hellip;) Ellipsis
-					</textarea>
+					(&amp;hellip;) Ellipsis
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -732,9 +821,7 @@
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;mdash;) Em Dash
-					</textarea>
+					(&amp;mdash;) Em Dash
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -748,9 +835,7 @@
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;ndash;) En Dash
-					</textarea>
+					(&amp;ndash;) En Dash
 				</a-code>
 
 				<a-code highlight class="card flex1">
@@ -764,16 +849,14 @@
 				</a-markdown>
 
 				<a-code class="card flex1 ">
-					<textarea>
-						(&amp;nbsp;) Non-breaking Space
-					</textarea>
+					(&amp;nbsp;) Non-breaking Space
 				</a-code>
 
 				<a-code highlight class="card flex1">
 					<p>(&nbsp;) Non-breaking Space</p>
 				</a-code>
 			</div>
-		</details>
+		</details> -->
 	</section>
 </body>
 </html>

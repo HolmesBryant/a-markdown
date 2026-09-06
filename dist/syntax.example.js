@@ -38,7 +38,12 @@ export default {
 	argument: null,
 	attribute: null,
 	comment: null,
-	function: function(string, node) {
+	function: null,
+	keyword: ['some','key', 'words'],
+	number: /\b\d+\b/g,
+	operator: null,
+	string: null,
+	tag: function(string, node) {
     let match, range;
     const ranges = [];
 		const regex = /<\/?[^>]+>/g;
@@ -50,10 +55,5 @@ export default {
 		}
 
 		return ranges;
-	},
-	keyword: ['some','key', 'words'],
-	number: /\b\d+\b/g,
-	operator: null,
-	string: null,
-	tag: null,
+	}
 }

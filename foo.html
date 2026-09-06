@@ -5,11 +5,26 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Foo</title>
 	<script type="module" src="src/a-markdown.js"></script>
+	<script type="module" src="extra/a-bind.min.js"></script>
+
+	<link rel="stylesheet" href="extra/styles.css">
 </head>
 <body>
-	<h1>Foo</h1>
-	<a-markdown class="card flex1">
-			(&lt;) Less Than
-	</a-markdown>
+<h1>FOO</h1>
+
+<a-markdown id="markdown" highlight>
+	The Highlight instance is then passed to the global [CSS:highlights static property](https://developer.mozilla.org/en-US/docs/Web/API/CSS/highlights_static).
+
+ foo_bar
+</a-markdown>
+
+<a-markdown class="card flex1">
+	*Italic Text (asterix)*
+	_Italic Text (underscore)_
+
+	lorem ipsum _foo bar_
+</a-markdown>
+
+
 </body>
 </html>

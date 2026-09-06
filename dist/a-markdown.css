@@ -1,25 +1,22 @@
 /* @version 2 */
 a-markdown {
-	--border-color: silver;
-	--code-background: gainsboro;
+	--blockquote-border: silver;
 	--checkbox-background: white;
+	--code-background: gainsboro;
+  --text-color: black;
   --block-pad: .5rem;
+  --link-color: dodgerblue;
   --list-indent: 1.5rem;
-  --block-indent: 2;
-
-	color-scheme: light dark;
+  --block-tab-size: 2;
 }
 
 
 @media (prefers-color-scheme: dark) {
 	a-markdown {
-		--border-color: dimgray;
+		--blockquote-border: linen;
 		--code-background: rgb(20,20,20);
 		--checkbox-background: rgb(20,20,20);
-	}
-
-	a-markdown::part(checkbox) {
-		background: rgb(40,40,40);
+		--text-color: white;
 	}
 }
 
@@ -29,12 +26,12 @@ a-markdown::part(html) {
 }
 
 /* headers */
-a-markdown::part(h1) {}
-a-markdown::part(h2) {}
-a-markdown::part(h3) {}
-a-markdown::part(h4) {}
-a-markdown::part(h5) {}
-a-markdown::part(h6) {}
+a-markdown::part(h1) { margin: 0 0 2rem 0 }
+a-markdown::part(h2) { margin: 1.75rem 1rem }
+a-markdown::part(h3) { margin: 1.5rem 1.25rem }
+a-markdown::part(h4) { margin: 1.25rem 1.5rem }
+a-markdown::part(h5) { margin: 1rem 2rem }
+a-markdown::part(h6) { margin: 0 2.25rem }
 
 /* bold */
 a-markdown::part(strong) {}
@@ -49,16 +46,32 @@ a-markdown::part(li){}
 a-markdown::part(ol-li) {}
 a-markdown::part(ul-li) {}
 
+/* links */
+a-markdown::part(link) {
+	color: var(--link-color);
+}
+
+/* blockquotes */
+a-markdown::part(blockquote) {
+  border-left: 4px solid var(--blockquote-border);
+  padding-left: var(--block-pad);
+  white-space: pre-wrap;
+}
+
 /* code */
 /*
 When you add a suffix to triple backticks (```foo)
 you can then target all "foo" code blocks with ::part(lang-foo).
 This works with any suffix.
 */
-a-markdown::part(code) { background: var(--code-background); }
-a-markdown::part(pre) { border-radius: .5rem; }
+a-markdown::part(code) {}
+a-markdown::part(pre) {
+	border-radius: .5rem;
+	padding: 0 0 1rem 1rem;
+}
 a-markdown::part(pre code) {}
 a-markdown::part(lang-html) {}
+a-markdown::part(lang-css) {}
 a-markdown::part(lang-javascript) {}
 a-markdown::part(lang-php) {}
 a-markdown::part(lang-python) {}
@@ -75,15 +88,15 @@ a-markdown::part(img) {
 a-markdown::part(checkbox) {
 	appearance: none;
 	background: var(--checkbox-background);
-	border: 1px solid var(--border-color);
 	border-radius: 2px;
-	color: light-dark(black, white);
+	color: var(--text-color)
 	display: inline-block;
 	height: 2rem;
 	position: relative;
 	width: 2rem;
 	vertical-align: middle;
 }
+
 a-markdown::part(checkbox checked)::after {
 	align-items: center;
 	content: "✓";

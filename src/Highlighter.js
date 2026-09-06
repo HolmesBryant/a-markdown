@@ -2,13 +2,14 @@
  * @file src/Highlighter.js
  * @author Holmes Bryant <https://github.com/HolmesBryant>
  * @license GPL-3.0
- * @version 2.0
+ * @version 2.5
  */
 
-import HTML from './syntax.html.js';
-import JAVASCRIPT from './syntax.javascript.js';
-import PHP from './syntax.php.js';
-import PYTHON from './syntax.python.js';
+import HTMLDefs from './syntax.html.js';
+import CSSDefs from './syntax.css.js';
+import JAVASCRIPTDefs from './syntax.javascript.js';
+import PHPDefs from './syntax.php.js';
+import PYTHONDefs from './syntax.python.js';
 
 /**
  * Caches syntax definitions.
@@ -183,7 +184,12 @@ export default class Highlighter {
     if (!ranges || ranges.size === 0) return;
     const highlightName = `${key}-${this.#id}`;
     const highlight = new Highlight(...ranges);
-    CSS.highlights.set(highlightName, highlight);
+
+    try {
+      CSS.highlights.set(highlightName, highlight);
+    } catch (error) {
+      console.error('Highlighter.applyHighlight(): Error setting CSS Highlights', error);
+    }
   }
 
   /**
@@ -247,7 +253,6 @@ export default class Highlighter {
 
       this.#applyHighlight(ranges, prop);
     }
-
     return CSS.highlights.size;
   }
 
@@ -273,18 +278,21 @@ export default class Highlighter {
     let def;
 
     switch (syntax) {
+      case 'css':
+        def = CSSDefs;
+        break;
       case 'html':
-        def = HTML;
+        def = HTMLDefs;
         break;
       case 'javascript':
       case 'js':
-        def = JAVASCRIPT;
+        def = JAVASCRIPTDefs;
         break;
       case 'php':
-        def = PHP;
+        def = PHPDefs;
         break;
       case 'python':
-        def = PYTHON;
+        def = PYTHONDefs;
         break;
     }
 

@@ -1,43 +1,35 @@
 :host {
-  color-scheme: light dark;
-
   --code-background: white;
-  --block-pad: .5rem;
-  --blockquote-border: 4px solid linen;
+  --text-color: black;
+  --blockquote-pad: 1rem;
   --list-indent: 1.5rem;
-  --block-tab-size: 2;
+  --block-tab-size: 4;
 
+  color: var(--text-color);
   display: block;
   overflow: auto;
   tab-size: var(--block-tab-size);
   white-space: wrap;
 }
 
-blockquote {
-  border-left: var(--blockquote-border);
-  padding-left: var(--block-pad);
-  tab-size: var(--block-tab-size);
-  white-space: pre-wrap;
-}
+blockquote { white-space: pre-wrap }
 
 code {
   background: var(--code-background);
-  color: light-dark(black, white);
-  padding: 0 2px;
-}
-
-pre:has(code) {
-  padding: 0 0 var(--block-pad) var(--block-pad);
+  padding: 0 5px;
 }
 
 ol, ul {
-  padding-left: var(--list-indent);
+  list-style-position: inside;
+  padding: 0;
 }
+
+ol ol, ul ul { margin-left: var(--list-indent) }
 
 pre {
   background: var(--code-background);
-  color: light-dark(black, white);
   overflow: auto;
+  padding: 0 0 var(--blockquote-pad) var(--blockquote-pad);
 }
 
 #container {
@@ -48,5 +40,6 @@ pre {
 @media (prefers-color-scheme: dark) {
   :host {
     --code-background: rgb(20,20,20);
+    --text-color: white;
   }
 }

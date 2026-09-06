@@ -1,8 +1,8 @@
 /**
- * Javascript syntax definition file for Highlighter module
- *
- *  @author Holmes Bryant <https://github.com/HolmesBryant>
- *  @license GPL-3.0
+ * @file syntax.javascript.js
+ * javascript syntax definition file for Highlighter module.
+ * @author Holmes Bryant <https://github.com/HolmesBryant>
+ * @license GPL-3.0
  */
 export default {
 	argument: function(string, node) {

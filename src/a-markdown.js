@@ -34,7 +34,7 @@ export default class AMarkdown extends HTMLElement {
    */
   #highlight = false;
 
-  #safe = false;
+  #palette = 'default';
 
   // -- Properties ---
 
@@ -71,7 +71,9 @@ export default class AMarkdown extends HTMLElement {
    * @type {string}
    * @private
    */
-  #markdown = '';
+  #markdown;
+
+  #noescape = false;
 
   /**
    * Reference to the slot element within shadow DOM.
@@ -87,10 +89,13 @@ export default class AMarkdown extends HTMLElement {
    */
   #spaces = 100;
 
+  #trim = 0;
+
   static observedAttributes = [
+    'debug',
     'file',
     'highlight',
-    'safe'
+    'palette'
   ]
 
   /**
@@ -101,16 +106,17 @@ export default class AMarkdown extends HTMLElement {
     blockquote: /^((?:>|&gt;)+)\s+(.*)/,
     boldAsterisk: /\*{2}([^*]+)\*{2}/g,
     boldUnderscore: /__([^*]+)__/g,
-    checkbox: /^\[([ xX]?)\]\s+(.*)$/,
+    checkbox: /\[([ xX]?)\]\s+(.*)$/,
     codeBlock: /^```([a-z0-9-]*)$/i,
     header: /^(#{1,6})\s+(.*)$/,
     horizontalRule: /^(\r?\n|^)([*_-]{3,})(\r?\n|$)/,
     image: /!\[([^\]]*)\]\(([^)]+)\)/g,
     inlineCode: /`([^`]+)`/g,
-    italicAsterisk: /\*([^*]+)\*/g,
-    italicUnderscore: /_([^_]+)_/g,
+    italicAsterisk: /(^|\s+)\*([^*]+)\*/g,
+    italicUnderscore: /(^|\s+)_([^_]+)_/g,
     link: /\[([^\]]*)\]\(([^)]+)\)/g,
     list: /^(\s*)([-*+]|\d+\.)\s+(.*)/,
+    trim: /^\s+/,
   }
 
   static template = document.createElement('template');
@@ -139,9 +145,29 @@ export default class AMarkdown extends HTMLElement {
   attributeChangedCallback(attr, oldval, newval) {
     if (newval === oldval) return;
     switch (attr) {
+    case 'debug':
+      this.debug = this.hasAttribute('debug');
+      break;
     case 'file':
-      this.#file = newval;
-      if (this.#connected) this.#fetchFile(newval);
+      this.#file = (newval) ? newval : null;
+      if (this.#connected) {
+        if (this.#file) {
+          this.#noescape = false;
+          this.#fetchFile(newval);
+        } else if (this.#markdown) {
+          // no file, check default (inline) markdown
+          let markdown;
+          if (this.#markdown.trim().startsWith('<textarea>')) {
+            const frag = document.createRange().createContextualFragment(this.#markdown);
+            markdown = frag.children[0].innerHTML;
+            this.#noescape = true;
+          } else {
+            markdown = this.#markdown;
+            this.#noescape = false;
+          }
+          this.render(markdown);
+        }
+      }
       break;
 
     case 'highlight':
@@ -155,9 +181,9 @@ export default class AMarkdown extends HTMLElement {
       }
       break;
 
-    case 'safe':
-      this.#safe = this.hasAttribute('safe');
-      if (this.#connected) this.render(this.#markdown);
+    case 'palette':
+      this.#palette = newval;
+      if (this.#connected) this.#highlightCode();
       break;
     }
 
@@ -171,8 +197,17 @@ export default class AMarkdown extends HTMLElement {
     this.#abortController = new AbortController();
 
     this.#slot.addEventListener('slotchange', event => {
+      let markdown;
+      if (this.children[0]?.localName === 'textarea') {
+        markdown = this.children[0].innerHTML;
+        if (!this.#file) this.#noescape = true;
+      } else {
+        markdown = this.innerHTML;
+      }
+
       this.#markdown = this.innerHTML;
-      this.render(this.innerHTML);
+      if (this.#file) return;
+      this.render(markdown);
     }, { signal: this.#abortController.signal });
 
     if (this.#file) this.#fetchFile(this.#file);
@@ -197,6 +232,8 @@ export default class AMarkdown extends HTMLElement {
    */
   parse(markdown) {
     if (!markdown) return '';
+    const leadingSpaces = markdown.match(AMarkdown.rex.trim) || 0;
+    markdown = markdown.trim();
 
     const lines = markdown.split('\n');
     const state = {
@@ -206,14 +243,19 @@ export default class AMarkdown extends HTMLElement {
       buffer: []
     };
 
-    lines.forEach( line => {
+    if (
+      lines[0].match(AMarkdown.rex.list) ||
+      lines[0].match(AMarkdown.rex.codeBlock)
+    ) {
+      lines[0] = (leadingSpaces[0] + lines[0]).replace(/\n/g, '');
+    }
+
+    lines.forEach( (line, index) => {
       this.#routeLine(line, state);
     });
 
     this.#closeOpenLists(state);
-    const spaceRex = new RegExp(`[ \\t]{${this.#spaces + 1}}`, 'g');
-    const html = state.buffer.join('\n');
-    return html.replace(spaceRex, '');
+    return state.buffer.join('\n');
   }
 
   /**
@@ -222,8 +264,10 @@ export default class AMarkdown extends HTMLElement {
    * @param {string} markdown - The Markdown to render.
    */
   render(markdown) {
-    this.#container.innerHTML = this.parse(markdown);
+    const html = this.parse(markdown);
+    this.#container.innerHTML = html;
     if (this.#highlight) this.#highlightCode();
+    this.#trim = 0;
   }
 
   // --- Private Methods ---
@@ -234,6 +278,7 @@ export default class AMarkdown extends HTMLElement {
    * @param {Object} state - The current parsing state object.
    */
   #addCodeLine(line, state) {
+    line = line.slice(this.#trim);
     state.buffer.push(this.#escapeHTML(line));
   }
 
@@ -270,15 +315,13 @@ export default class AMarkdown extends HTMLElement {
    * @returns {string} The escaped HTML string.
    */
   #escapeHTML(text) {
-    if (!this.#safe) return text;
+    if (this.#noescape) return text;
     const map = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&#39;',
-      '\\<': '&lt;',
-      '\\>': '&gt;'
+      "'": '&#39;'
     };
     return text.replace(/[&<>"']|\\<|\\>/g, match => map[match]);
   }
@@ -289,31 +332,67 @@ export default class AMarkdown extends HTMLElement {
    * @param {string} url - The url or path to the file
    */
   async #fetchFile(url) {
-    let content;
-
     if (!url) {
-      content = this.innerHTML;
-      if (content.trim() === '') return;
+      console.error('a-markdown.fetchFile(url): no URL was provided.', this);
+      return;
+    }
+    const response = await fetch(url);
+    if (response.ok) {
+      const contentType = response.headers.get('Content-Type');
+
+      if (contentType && !contentType.startsWith('text/markdown')) {
+        throw new Error(`a-markdown: Server responded, but not with a Markdown file. Make sure ${url} exists and is a Markdown file.`);
+      }
+
+    this.#destroyHighlights();
+    this.render(await response.text());
     } else {
-      const response = await fetch(url);
-      if (response.ok) {
-        const contentType = response.headers.get('Content-Type');
+      throw new Error(`a-markdown: Unable to fetch markdown file: ${this.#file}`);
+    }
+  }
 
-        if (contentType && !contentType.startsWith('text/markdown')) {
-          throw new Error(`a-markdown: Server responded, but not with a Markdown file. Make sure ${url} exists and is a Markdown file.`);
-        }
+  async #getPalette(value) {
+    if (value instanceof Map) return value;
 
-        content = await response.text();
-      } else {
-        throw new Error(`a-markdown: Unable to fetch markdown file: ${this.#file}`);
+    if (typeof value !== 'string') {
+      console.warn('a-markdown.getPalette: param must be a string.', value);
+      return;
+    }
+
+    let palette;
+
+    if (value.endsWith('.json')) {
+      try {
+        const response = await fetch (value);
+        const json = await response.json();
+        palette = new Map(json);
+      } catch (error) {
+        console.warn(`Cannot fetch ${value}. Using default palette.`, error, this);
+      }
+    } else if (value.trim().toLowerCase() === 'default') {
+      palette = null;
+    } else {
+      // "property:value, property:value" etc
+      try {
+        const props = value.split(',')
+        .map( member => member.trim() )
+        .map(
+          prop => prop.split(':')
+          .map( item => item.trim())
+        );
+
+        palette = JSON.stringify(props);
+      } catch (error) {
+        console.error(error);
       }
     }
 
-    this.#destroyHighlights();
-    this.#markdown = content;
-    this.render(content);
-    // this.#container.innerHTML = this.parse(content);
-    // if (this.#highlight) this.#highlightCode();
+    return palette;
+  }
+
+  #getSyntax(codeBlock) {
+    const cssClass = [...codeBlock.classList].find(item => item.startsWith('lang-'));
+    return (cssClass) ? cssClass.split('-')[1] : null;
   }
 
   /**
@@ -327,7 +406,7 @@ export default class AMarkdown extends HTMLElement {
     const match = working.match(AMarkdown.rex.blockquote);
 
     if (match && !state.inBlockquote) {
-      state.buffer.push('<blockquote part="blockquote">' + this.#escapeHTML(match[2]));
+      state.buffer.push('<blockquote part="blockquote">' + match[2]);
       state.inBlockquote = true;
       return true;
     } else if (!match && state.inBlockquote) {
@@ -335,7 +414,7 @@ export default class AMarkdown extends HTMLElement {
       state.inBlockquote = false;
       return false;
     } else if (match) {
-      state.buffer.push(this.#escapeHTML(match[2]));
+      state.buffer.push(match[2]);
       return true;
     }
   }
@@ -356,6 +435,8 @@ export default class AMarkdown extends HTMLElement {
       state.inCodeBlock = false;
     } else {
       this.#closeOpenLists(state);
+      const spaces = line.match(AMarkdown.rex.trim);
+      if (spaces) this.#trim = spaces[0].length
       const lang = match[1] ? `lang-${match[1]}` : '';
       state.buffer.push(`<pre part="pre"><code class="${lang}" part="pre code ${lang}">`);
       state.inCodeBlock = true;
@@ -374,7 +455,8 @@ export default class AMarkdown extends HTMLElement {
     const match = line.match(AMarkdown.rex.list);
     if (!match) return false;
 
-    const indent = match[1].replace(/\t/g, '    ').length; // Normalize tabs to 4 spaces
+    // Normalize tabs to 4 spaces
+    const indent = match[1].replace(/\t/g, '    ').length;
     const marker = match[2];
     const content = match[3];
     const listType = /^\d/.test(marker) ? 'ol' : 'ul';
@@ -404,21 +486,15 @@ export default class AMarkdown extends HTMLElement {
    * @param {Object} state - The current parsing state object.
    * @returns {void}
    */
-  #highlightCode() {
+  async #highlightCode() {
     const codeBlocks = this.#container.querySelectorAll('pre[part="pre"] code');
     if (!codeBlocks.length) return;
 
+    const palette = await this.#getPalette(this.#palette);
+
     for (const block of codeBlocks) {
-      let syntax;
-      const cssClass = [...block.classList].find(item => item.startsWith('lang-'));
-
-      if (!cssClass || cssClass.toLowerCase() === 'lang-css') {
-        syntax = 'html';
-      } else {
-        syntax = cssClass.split('-')[1];
-      }
-
-      const highlighter = new Highlighter(this, syntax, null);
+      const syntax = this.#getSyntax(block);
+      const highlighter = new Highlighter(this, syntax, palette);
       this.#highlighters.push(highlighter);
 
       try {
@@ -455,7 +531,7 @@ export default class AMarkdown extends HTMLElement {
     const working = text.trim();
     return working.replace(AMarkdown.rex.checkbox, (match, state, rest) => {
       const checked = state.toLowerCase() === 'x' ? 'checked ' : '';
-      return `<input type="checkbox" ${checked} disabled part="checkbox ${checked}"> ${this.#escapeHTML(rest)}`;
+      return `<input type="checkbox" ${checked} disabled part="checkbox ${checked}"> ${rest}`;
     });
   }
 
@@ -506,6 +582,8 @@ export default class AMarkdown extends HTMLElement {
    * @returns {string} - The processed text
    */
   #processInlineCode(line) {
+    const match = line.match(AMarkdown.rex.inlineCode);
+    if (!match) return line;
     line = this.#escapeHTML(line);
     return line.replace(AMarkdown.rex.inlineCode, '<code part="code">$1</code>');
   }
@@ -517,8 +595,8 @@ export default class AMarkdown extends HTMLElement {
    */
   #processItalic(line) {
     return line
-      .replace(AMarkdown.rex.italicAsterisk, '<em part="em">$1</em>')
-      .replace(AMarkdown.rex.italicUnderscore, '<em part="em">$1</em>');
+      .replace(AMarkdown.rex.italicAsterisk, '<em part="em">$2</em>')
+      .replace(AMarkdown.rex.italicUnderscore, ' <em part="em">$2</em>');
   }
 
   /**
@@ -529,7 +607,7 @@ export default class AMarkdown extends HTMLElement {
   #processLinks(line) {
     if (line.includes('<code')) return line;
     return line.replace(AMarkdown.rex.link, (match, line, url) => {
-      return `<a href="${this.#sanitizeURL(url)}" part="a" target="_blank">${this.#escapeHTML(line)}</a>`;
+      return `<a href="${this.#sanitizeURL(url)}" part="link" target="_blank">${this.#escapeHTML(line)}</a>`;
     });
   }
 
@@ -541,7 +619,7 @@ export default class AMarkdown extends HTMLElement {
    * @returns {string} - The processed text
    */
   #routeInlineElements(line, state) {
-    if (state.inCodeBlock) return line;
+    if (state.inCodeBlock) return this.#escapeHTML(line);
     let html = line;
     html = this.#processInlineCode(html);
     html = this.#processCheckboxes(html, state);
@@ -559,9 +637,6 @@ export default class AMarkdown extends HTMLElement {
    * @returns {void}
    */
   #routeLine(line, state) {
-    const spaces = line.match(/[ \t]+/);
-    if (spaces && spaces[0].length < this.#spaces) this.#spaces = spaces[0].length;
-
     if (this.#handleCodeBlocks(line, state)) return;
     if (state.inCodeBlock) {
       this.#addCodeLine(line, state);
@@ -634,9 +709,14 @@ export default class AMarkdown extends HTMLElement {
   get highlight() { return this.#highlight }
   set highlight(value) { this.toggleAttribute('highlight', value != null && value !== false) }
 
-  get safe() { return this.#safe }
-  set safe(value) {
-    this.toggleAttribute('safe', value != null && value !== false);
+  get palette() { return this.#palette }
+  set palette(value) {
+    if (typeof value === 'string') {
+      this.setAttribute('palette', value);
+    } else if (value instanceof Map) {
+      this.#palette = value;
+      this.#highlightCode();
+    }
   }
 }
 

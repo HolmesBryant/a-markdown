@@ -1,0 +1,13 @@
+[
+	["argument", "lime"],
+	["comment", "gray"],
+	["function", "tan"],
+	["keyword", "darksalmon"],
+	["number", "tomato"],
+	["operator", "firebrick"],
+	["property", "gold"],
+	["string", "darkkhaki"],
+	["tag", "slategray"],
+	["variable", "orange"]
+]
+

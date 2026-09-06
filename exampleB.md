@@ -1,13 +1,12 @@
 # Example B
 
-> A single line blockquote
-
-> Some multi-line
-> blockquote text
-
 `<script> alert("inline javascript")</script>`
 
 `<p>Inline HTML</p>`
+
+```
+<script> alert("inline javascript")</script>
+```
 
 ```html
 <!-- some html -->
@@ -21,7 +20,7 @@ function foo() {
 }
 ```
 
-```
+```css
 /* Some CSS */
 div {
 	border: 1px solid black;
