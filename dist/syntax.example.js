@@ -15,24 +15,23 @@
  * three types: Array, RegExp or Function.
  *
  * Arrays are useful for defining things like keywords.
- * Example: ['some', 'key', 'words'
+ * Example - keyword: ['some', 'key', 'words'
  *
  * RegExp expressions are useful for simple matches that
  * do not require extra processing or capture groups.
  * The RexExp must include the "g" flag.
  * Do not put quotes around the expression.
- * Example: /\b\d+\b/
+ * Example - number: /\b\d+\b/
  *
  * Functions are useful for more complex processing.
  * Each function must take two arguments (string, node)
  * and return a flat array of Range objects.
  *
- * "node" is the node containing the text inside the
- * parent element's start/end tags ie. this.childNodes[0].
+ * "node" is the text node being processed.
  * Use "node" when invoking range.setStart(node, index)
  * and range.setEnd(node, index)
- *"string" is the textContent contained by the
- * component, including spaces, tabs, line breaks etc.
+ *"string" is the text content contained by the
+ * node, including spaces, tabs, line breaks etc.
  */
 export default {
 	argument: null,

@@ -1,4 +1,11 @@
 /**
+ * @file src/a-markdown.js
+ * @author Holmes Bryant <https://github.com/HolmesBryant>
+ * @license GPL-3.0
+ * @version 2.0
+ */
+
+/**
  * @file syntax.html.js
  * html syntax definition file for Highlighter module.
  * @author Holmes Bryant <https://github.com/HolmesBryant>

@@ -226,13 +226,7 @@ Checkboxes are rendered as disabled HTML inputs for visual representation only.
 
 If you have code blocks in your Markdown and you want syntax highlighting, add the `highlight` attribute. `<a-markdown highlight>...</a-markdown>`
 
-The module contains a default color palette (if the syntax isn't given) and also syntax definitions for html, css, javascript, php and python. If your code is something else you may need to create a custom syntax definition file.
-
-A syntax definition file is a file which contains regular expressions, functions and/or arrays of keywords which tell the highlighter what to highlight.
-
-Custom syntax files must be named `syntax.[language].js` (e.g., syntax.python.js) and placed in the same directory as the a-markdown script.
-
-Refer to `syntax.custom.js` in the `dist` folder to help you get started writing your own syntax definition file.
+The module contains a default color palette and also syntax definitions for html, css, javascript, php and python. If your code is something else you may need to create a custom syntax definition file (see the section on **Custom Syntax Definitions**.
 
 ### Using the default color palette
 
@@ -311,15 +305,15 @@ Defining colors directly in the palette attribute
 
 ### Custom Syntax Definitions
 
-To support a new language, create a syntax file (e.g., syntax.custom.js). Syntax files are javascript modules which are imported into the component upon initialization.
+To support a new language, create a syntax definition file (e.g., syntax.custom.js). A syntax definition file is a file which contains regular expressions, functions and/or arrays of keywords which tell the highlighter what to highlight.
 
-The naming scheme for this file is "syntax.[language_name].js", so if you want to create a syntax file for Python, the file name would be "syntax.python.js".
+The naming scheme for this file is "syntax.[language_name].js", so if you want to create a syntax file for Groovy, the file name would be "syntax.groovy.js".
+
+This file must reside in the same directory as the a-markdown script.
 
 A syntax file must use `export default {...}` to export an object where keys are token names and values are Regular Expressions (with global flag), Arrays of keywords, or Functions.
 
-Syntax files must reside in the same directory as the a-markdown script.
-
-Refer to the `syntax.example.js` file in the `dist` folder.
+Refer to `syntax.custom.js` in the `dist` folder to help you get started writing your own syntax definition file.
 
 > &lt;a-markdown highlight>
 >  &grave;``custom
