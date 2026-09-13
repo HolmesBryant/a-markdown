@@ -1,31 +1,25 @@
 # a-markdown
 
-A standards-based, highly configurable custom HTML element that fetches, converts, and displays Markdown content as HTML.
-
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0).
+A custom HTML element that fetches, converts, and displays Markdown content as HTML.
 
 Demo: [https://holmesbryant.github.io/a-markdown/](https://holmesbryant.github.io/a-markdown/)
 
 ## Features
 
-* No need to install any packages. It dynamically loads Showdown.js and DOMPurify from a CDN.
+* No dependencies.
 
-* **Option to Install Dependencies**: For developers using a bundler like Vite, Webpack, or Rollup, they can install the dependencies themselves using NPM or Yarn. [Using NPM/Yarn](#usingnpmyarn)
+* **Flexible Content Sources**: Renders Markdown from inline content within the `<a-markdown>` tags or from a `.md` file specified in the `file` attribute.
 
-* **Flexible Content Sources**: Renders Markdown from inline content within the `<a-markdown>` tags or from a remote `.md` file specified in the `file` attribute.
+* **Code Highlighting:** Can highlight the code in code blocks by using the `highlight` attribute. See the section on Code Highlighting.
 
-* **Secure**: Built-in sanitization using DOMPurify to prevent XSS attacks. This is an opt-in feature via the `sanitize` attribute.
-
-* **Highly Configurable**: All Showdown options are exposed as attributes or properties for fine-grained control over the Markdown conversion.
-
-* **Dynamic and Reactive**: Programmatically update the Markdown content or any Showdown option and the element will automatically re-render.
+* **Supports:** headers, bold, italic, lists (ul, ol), inline code, code blocks, links, images, blockquotes, horizontal rules and checkboxes.
 
 ## Installation
 
-There is no installation step required. Simply include the `a-markdown.js` script in your HTML file.
+Include the script in your HTML file. Make sure to include `type="module"`.
 
 ```html
-<script type="module" src="a-markdown.js"></script>
+<script type="module" src="a-markdown.min.js"></script>
 ```
 ## Basic Usage
 
@@ -34,195 +28,422 @@ There is no installation step required. Simply include the `a-markdown.js` scrip
 To render inline Markdown, place it directly inside the `<a-markdown>` tags.
 
 ```html
-  <a-markdown>
-    # Hello, World!
-
-    This is a paragraph with **bold** and *italic* text.
-
-    - List item 1
-    - List item 2
-  </a-markdown>
+<a-markdown>
+  # Hello, World!
+</a-markdown>
 ```
+
+If your Markdown contains HTML you don't want the browser to process/execute, wrap it inside a `<textarea>`.
+
+```html
+<a-markdown>
+  <textarea>
+    <custom-element>...</custom-element>
+    <script>alert("I'm Evil!")</script>
+  </textarea>
+</a-markdown>
+```
+
 ### From a File
 
 To render a Markdown file, use the file attribute.
 
-`<a-markdown file="path/to/your/document.md"></a-markdown>`
-
-### With Sanitation
-
-For security, especially with user-provided content, enable sanitization with the sanitize attribute. This will strip out potentially harmful HTML, like `<script>` tags.
-
 ```html
-<a-markdown sanitize>
-  This is safe.
-  <script>alert('This script will be removed.')</script>
-</a-markdown>
+<a-markdown file="path/to/document.md"></a-markdown>
 ```
 
 ## Attributes and Properties
 
 All attributes can also be set as properties in JavaScript. For boolean attributes, the presence of the attribute sets it to true.
 
-### Core Attributes
+- **file** ( *string* )
+  - Default: `undefined`
+  - The path to the Markdown (.md) file you want to render.
 
-| Attribute | Property | Type    | Default        | Description |
-| :-------: | :------: | :-----: | :-------:      | :----------:|
-| file      | file     | string  | undefined      | The URL of the markdown file to fetch and render. |
-| src       | src      | string  | undefined      | Alias of 'file'.  |
-| sanitize  | sanitize | boolean | false          | If true, the rendered HTML is sanitized using DOMPurify. |
-| display   | display  | string  | 'converted'    | Controls the output. Can be 'converted' (renders HTML), 'markdown' (shows raw Markdown text), or 'html' (shows the converted HTML source code as text). |
-| options   | options  | object  | {tables: true} | A JSON string of options to pass to the Showdown converter. |
-| debug     | debug    | boolean | false          | If true, logs internal state and variables to the console. |
+- **highlight** ( *boolean* )
+  - Default: `false`
+  - When this attribute is present, the component performs syntax highlighting on all code blocks. See the section on Syntax Highlighting.
 
-### Showdown Options
+- **Palette** ( *string|map* )
+  - Default: `null`
+  - Used for customizing the colors used for highlighting code blocks.
+  - See the section on **Custom Color Palettes**
 
-a-markdown exposes many of Showdown's options as attributes. For example, to enable emoji support, you can set the emoji attribute.
+## Supported Markdown Features
 
-```html
-<a-markdown emoji>
-  I :heart: Markdown!
-</a-markdown>
+### Headers (h1 - h6)
+
+**Markdown:**
 ```
-The options which this component exposes are listed at the end of this document. [Available Options](#availableoptions)
-
-For a full list of available options, please refer to the Showdown Options Documentation.
-
-[Showdown Options Documentation](https://www.google.com/url?sa=E&q=https://github.com/showdownjs/showdown/options)
-
-## Examples
-
-### Enabling GitHub Flavored Markdown Features
-
-You can enable multiple features at once. This example enables GitHub-style code blocks, task lists, and strikethrough.
-
-```html
-    <a-markdown ghCodeBlocks tasklists strikethrough>
-      ```javascript
-      console.log("Hello, GitHub!");
-
-      - [x] Write the code
-
-      - [] Write the tests
-
-      This is ~~not~~ awesome.
-    </a-markdown>
-```
-### Using the `options` Attribute
-
-For more complex configurations, you can pass a JSON object to the `options` attribute.
-
-```html
-<a-markdown
-  options='{"tables": true, "strikethrough": true, "ghCompatibleHeaderId": true}'>
-  ...
-</a-markdown>
+# Title
+## Subtitle
 ```
 
-## Dynamic Updates with Javascript
-
-You can interact with the a-markdown element programmatically.
-
-```html
-<a-markdown id="my-markdown"></a-markdown>
-
-<script>
-  const myMarkdown = document.getElementById('my-markdown');
-
-  // Set initial content
-  myMarkdown.markdown = '# Initial Header';
-
-  // Update the content after 3 seconds
-  setTimeout(() => {
-    myMarkdown.markdown = '## Updated Header';
-  }, 3000);
-
-  // Enable an option
-  myMarkdown.simplifiedAutoLink = true;
-</script>
+**HTML Result:**
+```
+<h1>Title</h1>
+<h2>Subtitle</h2>
 ```
 
-## Security
+---
 
-When rendering Markdown from an untrusted source, it is **strongly recommended** to use the sanitize attribute. This will prevent Cross-Site Scripting (XSS) vulnerabilities by removing any potentially malicious code.
+### Bold Text
 
-`
-<a-markdown sanitize file="untrusted-user-content.md"></a-markdown>
-`
+**Markdown:**
+```
+**Strong Text** or __Strong Text__
+```
 
-## Dependencies
+**HTML Result:** `<strong>Strong Text</strong>`
 
-[Showdown.js](https://github.com/showdownjs/showdown) : For Markdown to HTML conversion.
+---
 
-[DOMPurify](https://github.com/cure53/DOMPurify) : For HTML sanitization.
+### Italic Text
 
-These libraries are loaded dynamically from a CDN and do not need to be manually included.
+**Markdown:**
+```
+*Emphasized Text* or _Emphasized Text_
+```
 
-### Using NPM/Yarn
+**HTML Result:** `<em>Emphasized Text</em>`
 
-For developers using a bundler like Vite, Webpack, or Rollup, they can install the dependencies themselves.
+---
 
-1. Install the packages:
+### Blockquotes
 
-`npm install showdown dompurify`
+**Markdown:**
 
-2. Import and configure in your main JavaScript file:
+```
+> I'm a blockquote
 
-This is the recommended approach for this environment. By importing the libraries and setting them on the AMarkdown class, you give the bundler full control.
+> I am a
+> multiline blockquote
+```
+
+**HTML Result:**
+
+```html
+<blockquote part="blockquote">I'm a blockquote</blockquote>
+
+<blockquote part="blockquote">I am a
+multiline blockquote
+</blockquote>
+```
+
+---
+
+### Inline Code
+
+**Markdown:** ``code snippet``
+
+**HTML Result:** `<code>code snippet</code>`
+
+---
+
+### Code Blocks
+
+**Markdown:**
+
+> &grave;&grave;&grave;
+> A block of code
+> &grave;&grave;&grave;
+
+**HTML Result:**
+```
+<pre><code>
+A block of code.
+</code></pre>
+```
+
+---
+
+### Unordered Lists
+
+**Markdown:**
+`- List Item`
+`* List Item`
+`+ List Item`
+
+**HTML Result:**
+```
+<ul>
+  <li>List Item</li>
+</ul>
+```
+
+---
+
+### Ordered Lists
+
+**Markdown:** `1. Ordered List Item`
+
+**HTML Result:**
+```
+<ol>
+  <li>Ordered List Item</li>
+</ol>
+```
+
+---
+
+### Links
+
+**Markdown:** `[A Link](http://foo.com)`
+
+**HTML Result:** `<a href="http://foo.com" target="_blank">A Link</a>`
+
+---
+
+### Images
+
+**Markdown:** `![Alt Text](extra/pic.png)`
+
+**HTML Result**: `<img src="extra/pic.png" alt="Alt Text">`
+
+---
+
+### Checkboxes
+
+Checkboxes are rendered as disabled HTML inputs for visual representation only.
+
+**Markdown:**
+
+```
+- [] Pending Task
+- [x] Completed Task
+```
+
+**HTML Result:**
+
+```
+<input disabled type="checkbox">`
+<input disabled checked type="checkbox">
+```
+
+---
+
+## Syntax Highlighting
+
+If you have code blocks in your Markdown and you want syntax highlighting, add the `highlight` attribute. `<a-markdown highlight>...</a-markdown>`
+
+The module contains a default color palette and also syntax definitions for html, css, javascript, php and python. If your code is something else you may need to create a custom syntax definition file (see the section on **Custom Syntax Definitions**.
+
+### Using the default color palette
+
+> &lt;a-markdown highlight>
+>  &grave;``
+>    &lt;div>some html&lt;/div>
+>  &grave;``
+> &lt;/a-markdown>
+
+### Highlighting Javascript
+
+> &lt;a-markdown highlight>
+>   &grave;``javascript
+>   function foo() { return 'foo'; }
+>   &grave;``
+> &lt;/a-markdown>
+
+### Custom Color Palettes
+
+You can customize the colors used for highlighting by passing a palette. This can be done via the `palette` attribute or property.
+
+Default Token Types: argument, comment, function, keyword, number, operator, property, string, variable, tag.
+
+Unless your syntax definition file adds new key words, you can just use the default keys. You do not have to include every key, the properties/values are merged into the default scheme, so any keys you omit will take the default color.
+
+Examples:
 
 ```javascript
-// main.js or app.js
-
-import Showdown from 'showdown';
-import DOMPurify from 'dompurify';
-
-// Assuming the component is in the same folder
-import AMarkdown from './a-markdown.js';
-
-// Make the libraries available to all a-markdown elements
-AMarkdown.Showdown = Showdown;
-AMarkdown.DOMPurify = DOMPurify;
+customElements.whenDefined( 'a-markdown' )
+.then (() => {
+  const instance = document.querySelector( 'a-markdown' );
+  const colors = new Map();
+  colors.set( "argument", "orange" );
+  colors.set( "comment", "gray" );
+  colors.set( "function", "dodgerblue" );
+  colors.set( "keyword", "purple" );
+  colors.set( "number", "darksalmon" );
+  colors.set( "operator", "darkred" );
+  colors.set( "property", "orchid" );
+  colors.set( "string", "darkgreen" );
+  colors.set( "tag", "olive" );
+  colors.set( "variable", "darkkhaki" );
+  // assign Map to palette
+  instance.palette = colors;
+});
 ```
 
-The custom element is now ready to be used in your HTML and will not make any CDN requests for these libraries.
+Using a JSON file
 
-## Available Options
+```html
+  <!-- custom-palette.json -->
+  [
+    ["argument", "lime"],
+    ["comment", "gray"],
+    ["function", "tan"],
+    ["keyword", "darksalmon"],
+    ["number", "tomato"],
+    ["operator", "firebrick"],
+    ["property", "gold"],
+    ["string", "darkkhaki"],
+    ["tag", "slategray"],
+    ["variable", "orange"]
+  ]
 
- - backslashEscapesHTMLTags
- - completeHTMLDocument
- - disableForced4SpacesIndentedSublists
- - ellipsis
- - emoji
- - encodeEmails
- - excludeTrailingPunctuationFromURLs
- - ghCodeBlocks
- - ghCompatibleHeaderId
- - ghMentions
- - ghMentionsLink
- - headerLevelStart
- - literalMidWordAsterisks
- - literalMidWordUnderscores
- - metadata
- - noHeaderId
- - omitExtraWLInCodeBlocks
- - openLinksInNewWindow
- - parseImgDimensions
- - prefixHeaderId
- - rawPrefixHeaderId
- - rawHeaderId
- - requireSpaceBeforeHeadingText
- - simpleLineBreaks
- - simplifiedAutoLink
- - smartIndentationFix
- - smoothLivePreview
- - splitAdjacentBlockquotes
- - strikethrough
- - tables
- - tablesHeaderId
- - tasklists
- - underline
+  <!-- index.html -->
+  <a-markdown highlight palette="custom-palette.json">
+  </a-markdown>
+```
+
+Defining colors directly in the palette attribute
+
+```html
+<a-markdown highlight palette="keyword:pink, tag:lime">
+</a-markdown>
+```
+
+### Custom Syntax Definitions
+
+To support a new language, create a syntax definition file (e.g., syntax.custom.js). A syntax definition file is a file which contains regular expressions, functions and/or arrays of keywords which tell the highlighter what to highlight.
+
+The naming scheme for this file is "syntax.[language_name].js", so if you want to create a syntax file for Groovy, the file name would be "syntax.groovy.js".
+
+This file must reside in the same directory as the a-markdown script.
+
+A syntax file must use `export default {...}` to export an object where keys are token names and values are Regular Expressions (with global flag), Arrays of keywords, or Functions.
+
+Refer to `syntax.custom.js` in the `dist` folder to help you get started writing your own syntax definition file.
+
+> &lt;a-markdown highlight>
+>  &grave;``custom
+>    println "Hello, World!"
+>  &grave;``
+> &lt;/a-markdown>
+
+A syntax definition file consists of a single exported object containing several properties. You must define this object as the default export.
+
+```javascript
+// syntax.example.js
+  export default {
+    argument: ... ,
+    comment: ... ,
+    function ... ,
+    keyword: ... ,
+    number: ... ,
+    operator: ...,
+    string: ...,
+    tag: ...,
+    variable: ...
+  };
+```
+
+Each property corresponds to a CSS Custom Highlight API css rule.
+
+The property names are the same as those desctribed in **Custom Color Palettes**.
+
+If you add a new property name, you must add a new color palette entry which includes the new property name and a color.
+
+```javascript
+//syntax.example.js
+export default {
+  ...
+  newProperty: ...
+}
+```
+
+```html
+<a-markdown highligh palette="newProperty:lemonChiffon">
+</a-markdown>
+```
+
+#### Definition Types
+
+The value for each property can be an Array, Function, RexExp or null.
+
+**Arrays** are useful for defining things like keywords.
+
+```javascript
+export default {
+  keywords: ['some', 'key', 'words'],
+  ...
+}
+```
+
+**Regular Expressions** are useful for simple matches that do not require extra processing or capture groups.
+The RexExp **must** include the "g" flag.
+Do not put quotes around the expression.
+
+```javascript
+  export default {
+    number: /\b\d+\b/g,
+    ...
+  }
+```
+
+**Functions** are useful for more complex processing.
+Each function takes two arguments (string, node) and must return a flat array of Range objects.
+
+ - `node` is the node containing the textContent of everything inside the component's start/end tags.
+   - Use `node` when invoking range.setStart(node, index) and range.setEnd(node, index).
+
+ - `string` is the actual content. It includes spaces, tabs, line breaks etc.
+
+```javascript
+export default {
+  tag: function ( string, node ) {
+    let match, range;
+    const ranges = [];
+    const regex = /<\/?[^>]+>/g;
+    while( match = regex.exec( string ) ) {
+      range = new Range();
+      range.setStart( node, match.index );
+      range.setEnd( node, match.index + match[0].length );
+      ranges.push( range );
+    }
+
+    // return flat array of Range objects
+    return ranges;
+  },
+  ...
+}
+```
+
+**Null** is used when you want to include a property, but don't really have a use for it at the moment.
+
+```javascript
+export default {
+  keywords: null,
+  ...
+}
+```
+
+**It is important to note that the effect of each following item supercedes the effect of the previous one.**
+
+In the following example, the "tag" definition will match everyting between and including angle brackets (including strings), but since the "string" definition follows it, any strings within the angle brackets will be colored according to the string color, not the tag color.
+
+```javascript
+// example
+export default {
+  tag: /<[^>]+>/g,
+  string: /['"].*['"]/g,
+  ...
+}
+```
+
+Under the hood, the component takes the ranges from a supplied Function, or creates ranges from a supplied RexExp or Array, and passes those ranges to [an instance of Highlight](https://developer.mozilla.org/en-US/docs/Web/API/Highlight).
+
+The Highlight instance is then passed to the global [CSS:highlights static property](https://developer.mozilla.org/en-US/docs/Web/API/CSS/highlights_static).
+
 
 # Change Log
+
+- v2
+  - Complete rewrite
+  - Removed dependence on Showdown and DOMPurify.
+  - It now works offline.
+  - Added optional syntax highlighting for code blocks.
+  - removed 'src' attribute.
 
 - v1.1:
 

@@ -4,524 +4,859 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>a-markdown Web Component</title>
+
+	<!-- <script type="module" src="src/a-markdown.js"></script> -->
+	<script type="module" src="dist/a-markdown.min.js"></script>
+
+	<script type="module" src="extra/a-menu.min.js"></script>
 	<script type="module" src="extra/a-bind.min.js"></script>
+	<script type="module" src="extra/a-color.min.js"></script>
 	<script type="module" src="extra/a-code.min.js"></script>
-	<script type="module" src="extra/check-box.js"></script>
-	<script type="module" src="src/a-markdown.js"></script>
-	<script type="module" src="extra/a-tabset.min.js"></script>
-	<script type="module" src="extra/a-tooltip.min.js"></script>
 
 	<link rel="stylesheet" href="extra/styles.css">
-	<link rel="stylesheet" href="extra/a-markdown.css">
-	<link rel="stylesheet" href="extra/a-tabset.css">
-
-	<style>
-		.pre
-		{ white-space: pre; }
-
-		check-box {
-			display: flex;
-			flex-basis: 47%;
-			justify-content: space-between;
-		}
-	</style>
+	<link rel="stylesheet" href="extra/a-menu.css">
+	<link rel="stylesheet" href="extra/a-color.css">
+	<link rel="stylesheet" href="extra/a-code.css">
+	<link rel="stylesheet" href="dist/a-markdown.css">
 </head>
 <body>
 	<header>
 		<h1>a-markdown Web Component</h1>
-		<p> A component that leverages the powerful <a href="https://github.com/showdownjs/showdown" target="_blank">Showdown</a> library to render markdown formatted text as HTML </p>
+		<p> A custom element that renders a subset of Markdown syntax as HTML</p>
 
-		<p><a href="tests/index.html" target="_blank">Tests</a></p>
+		<p>
+			<a href="tests/index.html" target="_blank">Tests</a>
+		</p>
 
 		<details id="readme">
 			<summary>README</summary>
-			<a-markdown file="README.md"></a-markdown>
+			<a-markdown highlight file="README.md"></a-markdown>
 		</details>
 	</header>
 
-	<section>
-	<h2>Quick Start</h2>
-		<a-code highlight>
-			<textarea>
-				<html>
-					<head>
-						...
-						<script type="module" src="path/to/a-markdown.min.js"></script>
-					</head>
+	<!-- Demo -->
+	<h2>Demo</h2>
 
-					<body>
-						<a-markdown file="path/to/markdown-file.md">
-						</a-markdown>
-					</body>
-				</html>
-			</textarea>
-		</a-code>
-	</section>
+	<section class="flex stretch nowrap">
+		<a-bindgroup model="dom:#demo">
+			<!-- attributes -->
+			<a-menu
+				open
+				show-icon=""
+				class="card">
+				<strong slot="label">Attributes</strong>
 
-	<a-tabset>
-		<strong slot="title">Attributes</strong>
-		<section slot="content">
-			<heading>
-				<h2>Attributes</h2>
-			</heading>
+				<div class="flex column start">
+					<label for="demo-file">file</label>
 
-			<div id="attr-settings" class="flex column stretch">
-
-				<div class="card flex space-between">
-				<!-- file -->
-					<label for="attr-file">file</label>
-
-					<a-bind
-						model="a-markdown#attr-file"
-						property="file">
-						<select id="attr-file">
-							<option value="extra/example-one.md">Example One</option>
-							<option value="extra/example-two.md">Example Two</option>
+					<a-bind prop="file">
+						<select id="demo-file">
+							<option value="">Inline Markdown</option>
+							<option>exampleA.md</option>
+							<option>exampleB.md</option>
 						</select>
 					</a-bind>
-
-					<a-tooltip position="modal">
-						<b slot="title">file</b>
-						<p>The URL of the markdown file to fetch.</p>
-					</a-tooltip>
-
-					<div class="flex column">
-						<a-markdown id="attr-file" file="extra/example-one.md">
-							foo
-						</a-markdown>
-
-						<a-bind
-							pull
-							model="a-markdown#attr-file"
-							property="file">
-							<output></output>
-						</a-bind>
-
-						<a-code highlight>
-							<textarea>
-								<a-markdown
-									file="path/to/file.md">
-								</a-markdown>
-							</textarea>
-						</a-code>
-					</div>
-				</div><!-- /attr-file -->
-
-				<div class="card flex space-between">
-				<!-- sanitize -->
-					<check-box
-						input-id="sanitize"
-						label="sanitize"
-						value="true"
-						bind="a-markdown#attr-sanitize:sanitize"
-						tooltip="(boolean) [default false]Whether to sanitize the converted HTML using DOMPurify.">
-					</check-box>
-
-					<div class="flex column">
-						<a-markdown id="attr-sanitize">
-							A malicious script!
-							[Click Me](javascript:alert('XSS_Attack'))
-						</a-markdown>
-
-						<a-code highlight>
-							<textarea>
-								<a-markdown sanitize>
-									...
-								</a-markdown>
-							</textarea>
-						</a-code>
-					</div>
 				</div>
-			</div><!-- /attr-settings -->
 
-			<div class="card flex space-between">
-			<!-- display -->
-				<span>display</span>
-				<a-tooltip position="modal">
-					<b slot="title">display</b>
-					<p>How to display the content. Can be:</p>
-					<ul>
-						<li>'converted': [default] The final rendered result.</li>
-						<li>'markdown': The original markdown text.</li>
-						<li>'html': Text of the raw HTML (including tags)</li>
-					</ul>
-				</a-tooltip>
+				<div class="flex start">
+					<a-bind prop="highlight" elem-prop="checked">
+						<input type="checkbox" id="demo-highlight">
+					</a-bind>
+					<label for="demo-highlight">highlight</label>
+				</div>
 
-				<div class="flex column">
-					<a-code highlight>
+				<div class="flex column start">
+					<label for="demo-palette">palette</label>
+
+					<a-bind prop="palette">
+						<select id="demo-palette">
+							<option>default</option>
+							<option>keyword:pink, tag:lime</option>
+							<option>custom-palette.json</option>
+						</select>
+					</a-bind>
+				</div>
+			</a-menu>
+
+			<a-menu
+				open
+				show-icon=""
+				class="card"
+				style="font-size:smaller">
+				<strong slot="label">Theme</strong>
+
+				<div class="flex start">
+					<a-bind prop="--code-background">
+						<a-color id="theme-code-background">
+						</a-color>
+					</a-bind>
+
+					<label for="theme-code-background">
+						--code-background
+					</label>
+				</div>
+
+				<div class="flex start">
+					<a-bind prop="--text-color">
+						<a-color id="theme-text-color">
+						</a-color>
+					</a-bind>
+
+					<label for="theme-text-color">
+					  --text-color
+					</label>
+				</div>
+
+				<div class="flex column start">
+					<label for="theme-block-pad">
+						--blockquote-pad
+					</label>
+
+					<a-bind prop="--blockquote-pad">
+						<input id="theme-block-pad">
+					</a-bind>
+				</div>
+
+				<div class="flex column start">
+					<label for="theme-block-tab-size">
+						--block-tab-size
+					</label>
+
+					<a-bind prop="--block-tab-size">
+						<input id="theme-block-tab-size">
+					</a-bind>
+				</div>
+
+				<div class="flex column start">
+					<label for="theme-list-indent">
+						--list-indent
+					</label>
+
+					<a-bind prop="--list-indent">
+						<input id="theme-list-indent">
+					</a-bind>
+				</div>
+			</a-menu>
+		</a-bindgroup>
+
+		<a-markdown
+			highlight
+			id="demo"
+			class="card flex1">
+			<textarea>
+				# Inline Markdown
+
+				This markdown text is nested inside a textarea (which is a child of `<a-markdown>`) to prevent the script from running.
+
+				`<script>alert('FOO!')</script>`
+
+				```html
+				<a-markdown>
+					&lt;textarea>
+						&lt;script>alert('FOO!')</script>
+					&lt;/textarea>
+				</a-markdown>
+				```
+
+				> If your Markdown comes from an untrusted source or contains potentially dangerous code, or HTML tags you do not want the browser to process/execute, wrap the whole Markdown string inside a &lt;textarea>.
+
+				---
+
+				* List Item
+				* List Item
+					* Sub-Item
+					** Sub-sub Item
+				* List Item
+			</textarea>
+		</a-markdown>
+	</section>
+
+	<h2>Examples</h2>
+
+	<section>
+		<details>
+		<summary>General Syntax</summary>
+			<div class="flex stretch nofrills">
+				<strong class="flex1 flex center">Rendered</strong>
+				<strong class="flex1 flex center">Markdown</strong>
+				<strong class="flex1 flex center">HTML</strong>
+			</div>
+
+			<div>
+			<h4>Headers</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						# Header 1
+						## Header 2
+						### Header 3
+
+						etc...
+					</a-markdown>
+
+					<a-code class="card flex1">
 						<textarea>
-							<a-markdown
-								display="converted | html | markdown">
-								...
-							</a-markdown>
+							# Header 1
+							## Header 2
+							### Header 3
+
+							etc...
+						</textarea>
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<h1>Header 1</h1>
+							<h2>Header 2</h2>
+							<h3>Header 3</h3>
+							<p>etc...</p>
 						</textarea>
 					</a-code>
 				</div>
 			</div>
-		</section>
 
-		<strong slot="title">Showdown Options</strong>
-		<section slot="content">
-			<heading>
-				<h2>Options</h2>
+			<div>
+			<h4>Bold Text</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						**Bold Text (double asterix)**
 
-				<pre style="white-space:collapse">
-					&lt;a-markdown options='{"property": "value"}'&gt;
-					...
-					&lt;/a-markdown&gt;
-				</pre>
-				or
-				<pre style="white-space:collapse">
-					&lt;a-markdown optionName&gt;
-					...
-					&lt;/a-markdown&gt;
-				</pre>
-				or
-				<pre style="white-space:collapse">
-					&lt;a-markdown optionName = "false"&gt;
-					...
-					&lt;/a-markdown&gt;
-				</pre>
-			</heading>
-
-			<div class="card flex space-between">
-			<!-- tables -->
-				<check-box
-					input-id="tables"
-					label="tables"
-					value="true"
-					bind="a-markdown#option-tables:tables"
-					tooltip="(boolean) [default false] Enable support for tables syntax.">
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown
-						id="option-tables">
-						| Heading One | Heading Two | Heading Three |
-						| :---------- | :---------: | ------------: |
-						| Cell A 1    | Cell A 2    | Cell A 3      |
-						| Cell B 1    | Cell B 2    | Cell B 3      |
+						__Bold Text (double underscore)__
 					</a-markdown>
+
+					<a-code class="card flex1">
+						**Bold Text**
+
+						__Bold Text__
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<strong>
+							Bold Text
+						</strong>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- tablesHeaderId -->
-				<check-box
-					input-id="tablesHeaderId"
-					label="tablesHeaderId"
-					value="true"
-					bind="a-markdown#option-tablesHeaderId:tablesHeaderId"
-					tooltip="(boolean) [default false] If enabled adds an id property to table headers tags.">
-
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown
-						debug
-						id="option-tablesHeaderId"
-						display="html">
-						| Heading A |
-						| :-------- |
-						| 100    		|
-						| *foo*  		|
+			<div>
+			<h4>Italic Text</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						*Italic Text (asterix)*
+						_Italic Text (underscore)_
 					</a-markdown>
+
+					<a-code class="card flex1">
+						&nbsp;*Italic Text*
+
+						&nbsp;_Italic Text_
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<em>
+							italic Text
+						</em>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- ellipsis -->
-				<check-box
-					input-id="ellipsis"
-					label="ellipsis"
-					value="true"
-					bind="a-markdown#option-ellipsis:ellipsis"
-					tooltip='(boolean) [default true] Replaces three dots with the ellipsis unicode character.'>
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown id="option-ellipsis" display="html" style="letter-spacing:.5rem">
-						...
+			<div>
+			<h4>Unordered List</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						- List item (-)
+						* List item (*)
+						+ List item (+)
 					</a-markdown>
+
+					<a-code class="card flex1">
+						- List item
+						* List item
+						+ List item
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<ul>
+							<li>List item</li>
+							<li>List item</li>
+							<li>List item</li>
+						</ul>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- strikethrough -->
-				<check-box
-					input-id="strikethrough"
-					label="strikethrough"
-					value="true"
-					bind="a-markdown#option-strikethrough:strikethrough"
-					tooltip="(boolean) [default false] Enable support for strikethrough syntax. ~~strikethrough~~ as <del>strikethrough</del>">
-
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown id="option-strikethrough">
-						~~Some strikethrough text~~
+			<div>
+			<h4>Ordered List</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						1. List item
+						1. List item
+						1. List item
 					</a-markdown>
+
+					<a-code class="card flex1">
+						1. List item
+						1. List item
+						1. List item
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<ol>
+							<li>List item</li>
+							<li>List item</li>
+							<li>List item</li>
+						</ol>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- simpleLineBreaks -->
-				<check-box
-					input-id="simpleLineBreaks"
-					label="simpleLineBreaks"
-					value="true"
-					bind="a-markdown#option-simpleLineBreaks:simpleLineBreaks"
-					tooltip="(boolean) [default false] Parses single line breaks as &lt; br &gt;, like GitHub does, without needing a blank line between lines of text.">
-
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown id="option-simpleLineBreaks">
-						line one.
-						line two.
-						line three.
+			<div>
+			<h4>Links</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						[A Link](exampleA.md)
 					</a-markdown>
+
+					<a-code class="card flex1">
+						[A Link](exampleA.md)
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<a
+								href="exampleA.md"
+								target="_blank">
+								A Link
+							</a>
+						</textarea>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- noHeaderId -->
-				<check-box
-					input-id="noHeaderId"
-					label="noHeaderId"
-					value="true"
-					bind="a-markdown#option-noHeaderId:noHeaderId"
-					tooltip="(boolean) [default false] Disable the automatic generation of header ids. Setting to true overrides prefixHeaderId">
-
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown
-						id="option-noHeaderId"
-						display="html">
-						# Header One
-						# Header Two
+			<div>
+			<h4>Images</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						![alt text](extra/pic.png)
 					</a-markdown>
+
+					<a-code class="card flex1">
+						![alt text](pic.png)
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<img
+								src="pic.png"
+								alt="alt text">
+						</textarea>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- ghCompatibleHeaderId -->
-				<check-box
-					input-id="ghCompatibleHeaderId"
-					label="ghCompatibleHeaderId"
-					value="true"
-					bind="a-markdown#option-ghCompatibleHeaderId:ghCompatibleHeaderId"
-					tooltip="(boolean) [default false] Generate header ids compatible with github style (spaces are replaced with dashes and a bunch of non alphanumeric chars are removed)">
-
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown
-						id="option-ghCompatibleHeaderId"
-						display="html">
-						# Header One!
+			<div>
+			<h4>Checkboxes</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						[] checkbox
+						[x] checked
 					</a-markdown>
+
+					<a-code class="card flex1">
+						[] checkbox
+						[x] checked
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<input
+								disabled
+								type="checkbox">
+
+							<input
+								disabled
+								checked
+								type="checkbox">
+							</textarea>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- prefixHeaderId -->
-				<check-box
-					input-id="prefixHeaderId"
-					label="prefixHeaderId"
-					value="true"
-					bind="a-markdown#option-prefixHeaderId:prefixHeaderId"
-					tooltip="(string/boolean) [default false] Add a prefix to the generated header ids. Passing a string will prefix that string to the header id. Setting to true will add a generic 'section' prefix.">
+			<div>
+			<h4>Blockquotes</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						> A blockquote
 
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown
-						id="option-prefixHeaderId"
-						display="html">
-						# header One
+						> Some multi-line
+						> blockquote text
 					</a-markdown>
+
+					<a-code class="card flex1">
+						> A blockquote
+
+						> Some multi-line
+						> blockquote text
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<blockquote>
+								A blockquote
+							</blockquote>
+
+							<blockquote>
+								Some multi-line\n
+								blockquote text
+							</blockquote>
+						</textarea>
+					</a-code>
 				</div>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- ghCodeBlocks -->
-				<check-box
-					input-id="ghCodeBlocks"
-					label="ghCodeBlocks"
-					value="true"
-					bind="a-markdown#option-ghCodeBlocks:ghCodeBlocks"
-					tooltip="(boolean) [default true] Enable support for GitHub code block style.">
-				</check-box>
+			<div>
+			<h4>Inline Code</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						`Some inline code`
+					</a-markdown>
 
-				<div class="flex column">
-					<a-markdown
-						id="option-ghCodeBlocks"
-						display="converted">
-						normal text
+					<a-code class="card flex1">
+						`Some inline code`
+					</a-code>
 
-						```javascript
-						// code block
-						var foo = 'bar';
-						console.log(foo);
+					<a-code highlight class="card flex1">
+						<textarea>
+							<code>
+								Some inline code
+							</code>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+			<h4>Horizontal Rules</h4>
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						---
+						___
+						***
+					</a-markdown>
+
+					<a-code class="card flex1">
+						---
+						___
+						***
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<hr>
+							<hr>
+							<hr>
+						</textarea>
+					</a-code>
+				</div>
+			</div>
+		</details>
+
+		<details>
+		<summary>Code Blocks</summary>
+
+			<div class="flex stretch nofrills">
+				<strong class="flex1 flex center">Rendered</strong>
+				<strong class="flex1 flex center">Markdown</strong>
+				<strong class="flex1 flex center">HTML</strong>
+			</div>
+
+			<div>
+				<h4>Inline</h4>
+
+				<div class="flex stretch">
+					<a-markdown class="card flex1">
+						`<div>Inline</div>`
+					</a-markdown>
+
+					<a-code class="card flex1">
+						<textarea>
+							`<div>Inline</div>`
+						</textarea>
+					</a-code>
+
+					<a-code highlight class="card flex1">
+							<code
+								part="code">
+								&amp;lt;div&ampgt; Inline &amp;lt;div&amp;gt;
+							</code>
+					</a-code>
+				</div>
+			</div>
+
+			<div>
+				<h4>HTML</h4>
+
+				<!-- html -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
 						```
-
-						normal text
+						<!-- html -->
+						<div>A div</div>
+						```
 					</a-markdown>
+
+					<a-code class="card flex1">
+						<textarea>
+								```
+								<!-- html -->
+								<div>A div</div>
+								```
+						</textarea>
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									part="pre code">
+									&amp;lt;!-- html --&amp;gt;
+									&amp;lt;div&amp;gt;A div&amp;lt;/div&amp;gt;
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<h4>CSS</h4>
+
+				<!-- css -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```
+						/* CSS */
+						div {
+							padding: 1rem;
+						}
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```
+						/* CSS */
+						div {
+							padding: 1rem;
+						}
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									part="pre code">
+									/* CSS */
+									div {
+										padding: 1rem;
+									}
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<h4>javascript</h4>
+
+				<!-- javascript -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```javascript
+						// javascript
+						function foo() {
+							return 'foo';
+						}
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```javascript
+						// javascript
+						function foo() {
+							return 'foo';
+						}
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									part="pre code lang-javascript">
+									....
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<h4>php</h4>
+
+				<!-- php -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```php
+						// php
+						function damage($type, $level) {
+							if ($type === 'fire') {
+								return $level * 2;
+							} elseif ($type === 'ice') {
+								return $level * 3;
+							} else {
+								return $level;
+							}
+						}
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```php
+						// php
+						function damage($type, $level) {
+							if ($type === 'fire') {
+								return $level * 2;
+							} elseif ($type === 'ice') {
+								return $level * 3;
+							} else {
+								return $level;
+							}
+						}
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									part="pre code lang-php">
+										....
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
+				</div>
+
+				<h4>python</h4>
+
+				<!-- python -->
+				<div class="flex stretch">
+					<a-markdown highlight class="card flex1">
+						```python
+						# python
+						#!/usr/bin/env python3
+
+						def item_cost(name):
+							costs = {"sword": 50, "potion": 10}
+							if name in costs: return costs[name]
+							else: return 0
+
+						result = item_cost("sword")
+						```
+					</a-markdown>
+
+					<a-code class="card flex1">
+						```python
+						# python
+						#!/usr/bin/env python3
+
+						def item_cost(name):
+							costs = {"sword": 50, "potion": 10}
+							if name in costs: return costs[name]
+							else: return 0
+
+						result = item_cost("sword")
+						```
+					</a-code>
+
+					<a-code highlight class="card flex1">
+						<textarea>
+							<pre
+								part="pre">
+								<code
+									part="pre code lang-python">
+									....
+								</code>
+							</pre>
+						</textarea>
+					</a-code>
 				</div>
 			</div>
+		</details>
 
-			<div class="card flex space-between">
-			<!-- parseImgDimensions -->
-				<check-box
-					input-id="parseImgDimensions"
-					label="parseImgDimensions"
-					value="true"
-					bind="a-markdown#option-parseImgDimensions:parseImgDimensions"
-					tooltip="(boolean) [default true] Enable/Disable support for setting image dimensions from within markdown syntax. <strong>NOTE: This Showdown setting does not appear to do anything!</strong>">
+		<!-- <details>
+		<summary>HTML Entities</summary>
 
-				</check-box>
-
-				<div class="flex column">
-					<a-markdown
-						id="option-parseImgDimensions"
-						display="markdown">
-						![iguana](extra/iguana.png =200x80)
-						![iguana](extra/iguana.png =100x*)
-					</a-markdown>
-				</div>
+			<div class="flex stretch nofrills">
+				<strong class="flex1 flex center">Rendered</strong>
+				<strong class="flex1 flex center">Markdown</strong>
+				<strong class="flex1 flex center">HTML</strong>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- tasklists -->
-				<check-box
-					input-id="tasklists"
-					label="tasklists"
-					value="true"
-					bind="a-markdown#option-tasklists:tasklists"
-					tooltip="(boolean) [default false] Enable support for GFM tasklists.">
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&copy;) Copyright
+				</a-markdown>
 
-				</check-box>
+				<a-code class="card flex1 ">
+					(&amp;copy;) Copyright
+				</a-code>
 
-				<div class="flex column">
-					<a-markdown id="option-tasklists">
-						- [] Task One
-						- [x] Task Two
-					</a-markdown>
-				</div>
+				<a-code highlight class="card flex1">
+					<p>(©) Copyright</p>
+				</a-code>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- encodeEmails -->
-				<check-box
-					input-id="encodeEmails"
-					label="encodeEmails"
-					value="true"
-					bind="a-markdown#option-encodeEmails:encodeEmails"
-					tooltip="(boolean) [default true] Enable e-mail addresses encoding through the use of Character Entities, transforming ASCII e-mail addresses into its equivalent decimal entities.">
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&amp;) Ampersand
+				</a-markdown>
 
-				</check-box>
+				<a-code class="card flex1 ">
+					(&amp;amp;) Ampersand
+				</a-code>
 
-				<div class="flex column">
-					<a-markdown id="option-encodeEmails" file="extra/encode-email.md" display="html">
-					</a-markdown>
-				</div>
+				<a-code highlight class="card flex1">
+					<p>(&) Ampersand</p>
+				</a-code>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- emoji -->
-				<check-box
-					input-id="emoji"
-					label="emoji"
-					bind="a-markdown#option-emoji:emoji"
-					value="true"
-					tooltip='(boolean) [default false] Enable emoji support. Ex: this is a :smile: emoji For more info on available emojis, see https://github.com/showdownjs/showdown/wiki/Emojis'>
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+						(&lt;) Less Than
+				</a-markdown>
 
-				</check-box>
+				<a-code class="card flex1 ">
+					(&amp;lt;) Less Than
+				</a-code>
 
-				<div class="flex column">
-					<a-markdown id="option-emoji">
-						:smile:
-					</a-markdown>
-				</div>
+				<a-code highlight class="card flex1">
+					<p>(<) Less Than</p>
+				</a-code>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- splitAdjacentBlockquotes -->
-				<check-box
-					input-id="splitAdjacentBlockquotes"
-					label="splitAdjacentBlockquotes"
-					value="true"
-					bind="a-markdown#option-splitAdjacentBlockquotes:splitAdjacentBlockquotes"
-					tooltip='(boolean) [default false] Split adjacent blockquote blocks.'>
-				</check-box>
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&gt;) Greater Than
+				</a-markdown>
 
-				<div class="flex column">
-					<a-markdown id="option-splitAdjacentBlockquotes" file="extra/blockquotes.md" display="html">
-					</a-markdown>
-				</div>
+				<a-code class="card flex1 ">
+					(&amp;gt;) Greater Than
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(>) Greater Than</p>
+				</a-code>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- backslashEscapesHTMLTags -->
-				<check-box
-					input-id="backslashEscapesHTMLTags"
-					label="backslashEscapesHTMLTags"
-					value="true"
-					bind="a-markdown#option-backslashEscapesHTMLTags:backslashEscapesHTMLTags"
-					tooltip='(boolean) [default false] Support for HTML Tag escaping. ex: \<div>foo\</div>'>
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&grave;) Backtick
+				</a-markdown>
 
-				</check-box>
+				<a-code class="card flex1 ">
+					(&amp;grave;) Backtick
+				</a-code>
 
-				<div class="flex column">
-					<a-markdown
-						id="option-backslashEscapesHTMLTags"
-						file="extra/backslashEscapesHTMLTags.md"
-						display="html">
-					</a-markdown>
-				</div>
+				<a-code highlight class="card flex1">
+					<p>(`) Backtick</p>
+				</a-code>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- openLinksInNewWindow -->
-				<check-box
-					input-id="openLinksInNewWindow"
-					label="openLinksInNewWindow"
-					value="true"
-					bind="a-markdown#option-openLinksInNewWindow:openLinksInNewWindow"
-					tooltip='(boolean) [default false] Open all links in new windows (by adding the attribute target="_blank"'>
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&quot;) Quotation Mark
+				</a-markdown>
 
-				</check-box>
+				<a-code class="card flex1 ">
+					(&amp;quot;) Quotation Mark
+				</a-code>
 
-				<div class="flex column">
-					<a-markdown
-						id="option-openLinksInNewWindow"
-						display="html">
-						[Link Text](https://developer.mozilla.org/)
-					</a-markdown>
-				</div>
+				<a-code highlight class="card flex1">
+					<p>(") Quotation Mark</p>
+				</a-code>
 			</div>
 
-			<div class="card flex space-between">
-			<!-- ghMentions -->
-				<check-box
-					input-id="ghMentions"
-					label="ghMentions"
-					value="true"
-					bind="a-markdown#option-ghMentions:ghMentions"
-					tooltip="(boolean) [default false] Enables github @mentions, which link to the username mentioned">
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&apos;) Apostrophe
+				</a-markdown>
 
-				</check-box>
+				<a-code class="card flex1 ">
+					(&amp;apos;) Apostrophe
+				</a-code>
 
-				<div class="flex column">
-					<a-markdown
-						id="option-ghMentions">
-						pinging @foo
-					</a-markdown>
-				</div>
+				<a-code highlight class="card flex1">
+					<p>(') Apostrophe</p>
+				</a-code>
 			</div>
-		</section>
-	</a-tabset>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&hellip;) Ellipsis
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					(&amp;hellip;) Ellipsis
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(…) Ellipsis</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&mdash;) Em Dash
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					(&amp;mdash;) Em Dash
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(—) Em Dash</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&ndash;) En Dash
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					(&amp;ndash;) En Dash
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(–) En Dash</p>
+				</a-code>
+			</div>
+
+			<div class="flex stretch">
+				<a-markdown class="card flex1">
+					(&nbsp;) Non-breaking Space
+				</a-markdown>
+
+				<a-code class="card flex1 ">
+					(&amp;nbsp;) Non-breaking Space
+				</a-code>
+
+				<a-code highlight class="card flex1">
+					<p>(&nbsp;) Non-breaking Space</p>
+				</a-code>
+			</div>
+		</details> -->
+	</section>
 </body>
 </html>

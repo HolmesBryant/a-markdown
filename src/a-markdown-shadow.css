@@ -1,0 +1,45 @@
+:host {
+  --code-background: white;
+  --text-color: black;
+  --blockquote-pad: 1rem;
+  --list-indent: 1.5rem;
+  --block-tab-size: 4;
+
+  color: var(--text-color);
+  display: block;
+  overflow: auto;
+  tab-size: var(--block-tab-size);
+  white-space: wrap;
+}
+
+blockquote { white-space: pre-wrap }
+
+code {
+  background: var(--code-background);
+  padding: 0 5px;
+}
+
+ol, ul {
+  list-style-position: inside;
+  padding: 0;
+}
+
+ol ol, ul ul { margin-left: var(--list-indent) }
+
+pre {
+  background: var(--code-background);
+  overflow: auto;
+  padding: 0 0 var(--blockquote-pad) var(--blockquote-pad);
+}
+
+#container {
+  overflow: auto;
+  padding: 0 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host {
+    --code-background: rgb(20,20,20);
+    --text-color: white;
+  }
+}
